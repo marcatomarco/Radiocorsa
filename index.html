@@ -137,6 +137,10 @@
   .gdelta{font-family:var(--mono); font-size:10px; color:#8C94A2; border:1px solid var(--line);
           border-radius:5px; padding:3px 6px; background:#15181F}
   .gref{font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:#5F6673}
+  .tgl.on{border-color:var(--morado); color:#D3BEF6; background:#1E1730}
+  .tgl.off{opacity:.55; text-decoration:line-through}
+  .srcline{font-family:var(--mono); font-size:11px; color:#9AA2B0; background:#15181F; border:1px solid var(--line);
+           border-radius:7px; padding:8px 10px; margin:2px 0 12px; line-height:1.5}
 
   /* rider tile: dorsale, nome e le quattro classifiche sempre a vista */
   .rgrid{display:grid; gap:8px; grid-template-columns:repeat(auto-fill,minmax(236px,1fr))}
@@ -287,6 +291,9 @@
       <span class="label">Race situation</span>
       <span style="display:flex;gap:8px;align-items:center">
         <span class="label" id="count"></span>
+        <button class="ghost tgl on" id="gapsToggle" style="padding:7px 11px;min-height:36px"
+                title="Let the radio set the gaps">⏱ gaps</button>
+        <button class="ghost" id="undoBtn" style="padding:7px 11px;min-height:36px">Undo</button>
         <button class="ghost" id="addGroup" style="padding:7px 11px;min-height:36px">+ Group</button>
         <button class="ghost" id="wipe" style="padding:7px 11px;min-height:36px">Reset</button>
       </span>
@@ -2754,7 +2761,23 @@ function addRider(r, how, g){
   place(r.bib, g || null);
   render();
 }
-function clearBoard(){ groups = []; loose = []; heardHow.clear(); freshBibs.clear(); gid = 1; }
+function clearBoard(){ groups = []; loose = []; heardHow.clear(); freshBibs.clear(); gid = 1; lastRefGroup = null; }
+
+/* ---------- annulla ---------- */
+const history = [];
+function snapshot(){
+  history.push(JSON.stringify({ groups, loose, gid }));
+  if (history.length > 40) history.shift();
+  const u = document.getElementById('undoBtn');
+  if (u) u.disabled = false;
+}
+function undo(){
+  const s = history.pop();
+  if (!s) return;
+  const d = JSON.parse(s);
+  groups = d.groups; loose = d.loose; gid = d.gid; lastRefGroup = null;
+  render();
+}
 
 /* ---------- formattazione ---------- */
 function fmtGap(s){
@@ -2903,7 +2926,7 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
 /* ---------- configurazione ---------- */
 const CFG_KEY = 'radio-corsa-cfg';
 const cfg = Object.assign(
-  { engine:'auto', dgKey:'', keepAwake:true, meter:!isIOS, autoResume:true },
+  { engine:'auto', dgKey:'', keepAwake:true, meter:!isIOS, autoResume:true, radioGaps:true },
   (()=>{ try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch(e){ return {}; } })()
 );
 function saveCfg(){ try{ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }catch(e){} }
@@ -3422,11 +3445,18 @@ function readSegment(seg, lang){
     const m = p.re.exec(s);
     if (m){ out.gap = p.f(m); s = s.replace(m[0], ' '); break; }
   }
+  // "il gruppo a venti" senza unità: lo accetto solo se quel numero non è un
+  // dorsale della start list, altrimenti "il gruppo con il ventuno" diventa
+  // un distacco di 21 secondi inventato dal nulla
   if (out.gap == null && out.kind){
     const m = BARE_GAP.exec(s);
-    if (m && +m[1] <= 600){ out.gap = +m[1]; s = s.replace(m[0], ' '); }
+    if (m && +m[1] <= 600 && !byBib.has(+m[1])){ out.gap = +m[1]; s = s.replace(m[0], ' '); }
   }
-  out.riders = detect(s, lang).hits.map(h => h.rider);
+  // lo stesso corridore può arrivare due volte (dal numero e dal cognome)
+  const seen = new Map();
+  detect(s, lang).hits.forEach(h => { if (!seen.has(h.rider.bib)) seen.set(h.rider.bib, h.rider); });
+  out.riders = [...seen.values()];
+  out.text = seg;
   return out;
 }
 
@@ -3438,13 +3468,14 @@ function ensureHead(){
 function kindFromGap(gap){ return gap === 0 ? 'head' : 'chase'; }
 
 // trova o crea il gruppo che sta a `abs` secondi dalla testa della corsa
-function resolveAt(abs, kind){
+function resolveAt(abs, kind, src){
   abs = Math.max(0, Math.round(abs));
   let g = groupByGap(abs);
   // fuga, gruppo e gruppetto sono unici; di contrattacchi ce ne possono essere tanti
   if (!g && kind && kind !== 'chase') g = groups.find(x => x.kind === kind);
   if (!g) g = makeGroup(abs, KIND_LABEL[kind] || 'Group', kind || kindFromGap(abs));
   g.gap = abs; g.t = Date.now();
+  if (src) g.src = src;
   if (kind){ g.kind = kind; g.label = KIND_LABEL[kind]; }
   return g;
 }
@@ -3456,9 +3487,13 @@ function applySituation(raw, lang){
   const segs = text.split(/\s*,\s*|\s+(?:y|e|et|and|mientras|mentre|while)\s+/)
                    .map(s => s.trim()).filter(Boolean);
   let last = null, touched = false, pending = [], firstGroup = null;
+  snapshot();
 
   for (const seg of segs){
     const info = readSegment(seg, lang);
+    // interruttore ⏱ gaps: quando e' spento la radio puo' solo assegnare
+    // corridori ai gruppi, mai creare o spostare un distacco
+    if (!cfg.radioGaps){ info.gap = null; info.ref = null; }
     if (info.gap == null && !info.kind && !info.riders.length) continue;
 
     // un gruppo "di testa" non puo' stare dietro: se sento testa + distacco
@@ -3471,23 +3506,23 @@ function applySituation(raw, lang){
         // distacco misurato dal gruppo: chi e' nominato sta DAVANTI di tanto
         const bunch = groups.find(x => x.kind === 'bunch');
         if (bunch && bunch.gap != null){
-          g = resolveAt(bunch.gap - info.gap, info.kind === 'bunch' ? null : info.kind);
+          g = resolveAt(bunch.gap - info.gap, info.kind === 'bunch' ? null : info.kind, info.text);
         } else {
           const b = bunch || makeGroup(info.gap, 'Peloton', 'bunch');
-          b.gap = info.gap; b.kind = 'bunch'; b.label = 'Peloton'; b.t = Date.now();
+          b.gap = info.gap; b.kind = 'bunch'; b.label = 'Peloton'; b.t = Date.now(); b.src = info.text;
           g = (info.kind && info.kind !== 'head' && info.kind !== 'bunch')
-                ? resolveAt(0, info.kind) : ensureHead();
+                ? resolveAt(0, info.kind, info.text) : ensureHead();
         }
       } else if (info.ref === 'prev'){
         // "a dieci dal gruppo precedente": si somma a quello nominato prima,
         // anche se era nella frase precedente
         const ref = (last && last.gap != null) ? last : lastRefGroup;
         const base = ref && ref.gap != null ? ref.gap : 0;
-        g = resolveAt(base + info.gap, info.kind);
+        g = resolveAt(base + info.gap, info.kind, info.text);
         ensureHead();
       } else {
         // riferimento implicito o esplicito ai primi
-        g = resolveAt(info.gap, info.kind);
+        g = resolveAt(info.gap, info.kind, info.text);
         if (info.gap > 0) ensureHead();
       }
     } else if (info.kind){
@@ -3513,6 +3548,7 @@ function applySituation(raw, lang){
   // nomi rimasti senza gruppo: se nella frase un gruppo c'era, vanno lì
   pending.forEach(r => { heardHow.set(r.bib,'radio'); place(r.bib, firstGroup || null); });
   if (last) lastRefGroup = last;
+  if (!touched) history.pop();
   if (touched) render();
 }
 
@@ -3550,6 +3586,7 @@ function gapMenu(gid2){
   const g = groupById(gid2); if (!g) return;
   const cur = g.gap == null ? 0 : g.gap;
   openMenu('Gap for ' + g.label, 'Time behind the head of the race.',
+    (g.src ? `<div class="srcline">set from what it heard:<br>“${g.src}”</div>` : '') +
     `<div class="gapedit">
        <input id="gm" type="number" min="0" max="59" value="${Math.floor(cur/60)}" inputmode="numeric"> :
        <input id="gs" type="number" min="0" max="59" value="${cur%60}" inputmode="numeric">
@@ -3568,21 +3605,24 @@ menu.addEventListener('click', e => {
   const bib = +menuBox.dataset.bib, gidv = +menuBox.dataset.gid;
   if (b.dataset.x === 'close') return closeMenu();
   if (b.dataset.pcs){ window.open(pcsUrl({slug:b.dataset.pcs}), '_blank'); return closeMenu(); }
-  if (b.dataset.drop){ detach(+b.dataset.drop); render(); return closeMenu(); }
+  if (b.dataset.drop){ snapshot(); detach(+b.dataset.drop); render(); return closeMenu(); }
   if (b.dataset.move){
+    snapshot();
     const v = b.dataset.move;
     if (v === 'loose') place(bib, null);
     else if (v === 'new'){ const g = makeGroup(null, 'Group', 'chase'); place(bib, g); render(); closeMenu(); return gapMenu(g.id); }
     else place(bib, groupById(v));
     render(); return closeMenu();
   }
-  if (b.dataset.quick != null){ const g = groupById(gidv); if (g){ g.gap = +b.dataset.quick; g.t = Date.now(); } render(); return closeMenu(); }
+  if (b.dataset.quick != null){ snapshot(); const g = groupById(gidv); if (g){ g.gap = +b.dataset.quick; g.t = Date.now(); g.src = null; } render(); return closeMenu(); }
   if (b.dataset.setgap){
+    snapshot();
     const g = groupById(gidv);
-    if (g){ g.gap = Math.max(0, (+document.getElementById('gm').value||0)*60 + (+document.getElementById('gs').value||0)); g.t = Date.now(); }
+    if (g){ g.gap = Math.max(0, (+document.getElementById('gm').value||0)*60 + (+document.getElementById('gs').value||0)); g.t = Date.now(); g.src = null; }
     render(); return closeMenu();
   }
   if (b.dataset.kind){
+    snapshot();
     const g = groupById(gidv);
     if (g){ g.kind = b.dataset.kind; g.label = KIND_LABEL[b.dataset.kind]; }
     render(); return closeMenu();
@@ -3599,6 +3639,7 @@ boardEl.addEventListener('click', e => {
   if (act.dataset.act === 'gap' || act.dataset.act === 'label') return gapMenu(g.id);
   if (act.dataset.act === 'del'){
     if (!g) return;
+    snapshot();
     g.riders.forEach(b => { if (!loose.includes(b)) loose.unshift(b); });
     groups = groups.filter(x => x.id !== g.id);
     return render();
@@ -3611,8 +3652,19 @@ boardEl.addEventListener('click', e => {
   }
 });
 
-document.getElementById('addGroup').onclick = () => { const g = makeGroup(null,'Group','chase'); render(); gapMenu(g.id); };
-document.getElementById('wipe').onclick = () => { clearBoard(); render(); };
+document.getElementById('addGroup').onclick = () => { snapshot(); const g = makeGroup(null,'Group','chase'); render(); gapMenu(g.id); };
+document.getElementById('wipe').onclick = () => { snapshot(); clearBoard(); render(); };
+document.getElementById('undoBtn').onclick = undo;
+
+const gapsBtn = document.getElementById('gapsToggle');
+function paintGapsBtn(){
+  gapsBtn.className = 'ghost tgl ' + (cfg.radioGaps ? 'on' : 'off');
+  gapsBtn.title = cfg.radioGaps
+    ? 'The radio can set the gaps — tap to lock them'
+    : 'Gaps locked: the radio only files riders into groups';
+}
+gapsBtn.onclick = () => { cfg.radioGaps = !cfg.radioGaps; saveCfg(); paintGapsBtn(); };
+paintGapsBtn();
 
 document.getElementById('manual').addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
@@ -3621,7 +3673,7 @@ document.getElementById('manual').addEventListener('keydown', e => {
   else { e.target.value = ''; e.target.placeholder = 'Bib not in start list'; setTimeout(()=> e.target.placeholder='Bib by hand — press enter to add', 1600); }
 });
 
-document.getElementById('clear').onclick = () => { clearBoard(); render(); };
+document.getElementById('clear').onclick = () => { snapshot(); clearBoard(); render(); };
 
 const rosterEl = document.getElementById('roster');
 let rosterTarget = null;   // id del gruppo a cui aggiungere, se aperto da "+ rider"
