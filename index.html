@@ -134,17 +134,38 @@
   .gcount{font-family:var(--mono); font-size:11px; color:var(--muted)}
   .gage{font-family:var(--mono); font-size:10px; color:#5F6673; margin-left:auto}
   .gx{background:transparent; border:0; color:#5F6673; font-size:19px; cursor:pointer; padding:0 4px; line-height:1}
-  .chips{display:flex; flex-wrap:wrap; gap:7px}
-  .rchip{display:flex; align-items:baseline; gap:7px; background:var(--panel2); border:1px solid var(--line);
-         border-radius:8px; padding:7px 10px; cursor:pointer; color:var(--text); text-align:left; position:relative; overflow:hidden}
-  .rchip b{font-family:var(--cond); font-weight:700; font-size:19px; color:#fff; line-height:1}
-  .rchip span{font-family:var(--cond); font-weight:700; font-size:16px; letter-spacing:.01em}
-  .rchip i{font-family:var(--mono); font-style:normal; font-size:10px; color:var(--muted)}
-  .rchip.fresh{border-color:var(--morado)}
-  .rchip .jz{position:absolute; left:0; top:0; bottom:0; width:3px}
-  .rchip.out{opacity:.5; text-decoration:line-through}
-  .chip.unk{border-style:dashed; color:var(--muted)}
-  .chip.add{background:transparent; border:1px dashed var(--line); color:var(--muted); cursor:pointer; font-family:var(--mono); font-size:11px; padding:6px 10px}
+  .gdelta{font-family:var(--mono); font-size:10px; color:#8C94A2; border:1px solid var(--line);
+          border-radius:5px; padding:3px 6px; background:#15181F}
+  .gref{font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:#5F6673}
+
+  /* rider tile: dorsale, nome e le quattro classifiche sempre a vista */
+  .rgrid{display:grid; gap:8px; grid-template-columns:repeat(auto-fill,minmax(236px,1fr))}
+  .rtile{position:relative; background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+         padding:9px 10px 10px; text-align:left; cursor:pointer; color:inherit; overflow:hidden; font-family:inherit}
+  .rtile.fresh{border-color:var(--morado); box-shadow:0 0 0 1px var(--morado) inset}
+  .rtile:focus-visible{outline:2px solid var(--morado); outline-offset:2px}
+  .rtop{display:flex; align-items:baseline; gap:9px}
+  .rbibn{font-family:var(--cond); font-weight:700; font-size:27px; line-height:.95; color:#fff; min-width:40px}
+  .rname{font-family:var(--cond); font-weight:700; font-size:18px; line-height:1.06; letter-spacing:.01em}
+  .rname em{display:block; font-family:var(--body); font-style:normal; font-weight:500; font-size:11px;
+            color:var(--muted); letter-spacing:0; margin-top:1px}
+  .rcls{display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin-top:9px}
+  .cls{border:1px solid var(--line); border-radius:6px; padding:4px 3px 3px; text-align:center;
+       font-family:var(--mono); font-size:9px; letter-spacing:.06em; color:#7F8794; background:#15181F}
+  .cls b{display:block; font-family:var(--cond); font-size:17px; font-weight:700; color:#fff; line-height:1}
+  .cls i{display:block; font-style:normal; font-size:9px; color:#6E7686; margin-top:1px}
+  .cls.on.gc {border-color:#4B3670; background:#1A1424}
+  .cls.on.pts{border-color:#245C33; background:#111E15}
+  .cls.on.kom{border-color:#6B2723; background:#21120F}
+  .cls.on.yng{border-color:#5C5C5C; background:#1A1A1A}
+  .cls.off{opacity:.3}
+  .cls.lead b{color:#F2E38A}
+  .rjz{position:absolute; left:0; top:0; bottom:0; width:4px}
+  .rout{margin-top:8px; color:var(--rojo); font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase}
+  .tadd{border:1px dashed var(--line); border-radius:10px; background:transparent; color:var(--muted);
+        font-family:var(--mono); font-size:11px; cursor:pointer; padding:14px 10px; align-self:start}
+  .tunk{border:1px dashed var(--line); border-radius:10px; display:flex; align-items:center; justify-content:center;
+        color:var(--muted); font-family:var(--mono); font-size:11px; text-align:center; padding:10px; min-height:74px}
   .boardempty{color:var(--muted); font-size:13px; line-height:1.6; padding:16px 2px; max-width:52ch}
   .boardempty b{color:#C3C9D3}
 
@@ -283,8 +304,9 @@
 
     <div class="note">
       Tap a rider to move him between groups or open him on ProCyclingStats; tap a gap or a label to correct it.
-      Groups build themselves from what the radio says: <b>"two riders twenty seconds on the bunch"</b>,
-      <b>"five chasers at ten seconds"</b>, <b>"peloton at a minute thirty"</b>. Listening restarts on its own and
+      Groups build themselves from what the radio says, and it follows which reference the gap is measured from:
+      <b>"two riders twenty seconds on the bunch"</b>, <b>"another five at fifteen seconds from the leaders"</b>,
+      <b>"four more ten seconds off the group ahead"</b>. Listening restarts on its own and
       the screen stays awake while the microphone is live. The <b>Safari</b> engine is free but iOS cuts it every so
       often (the app stitches it back); the <b>cloud</b> engine streams without a break. Close the app and reopen it
       offline: the race data stays on this iPad.
@@ -2703,7 +2725,9 @@ function makeGroup(gap, label, kind){
 function groupById(id){ return groups.find(g => g.id === +id); }
 function groupByGap(gap, tol){
   if (gap == null) return null;
-  tol = tol == null ? 7 : tol;
+  // stretta: la radio ripete "venti"/"ventuno" per lo stesso gruppo, ma
+  // quindici e venti sono due gruppi diversi e vanno tenuti separati
+  tol = tol == null ? 3 : tol;
   let best = null, bd = Infinity;
   for (const g of groups){
     if (g.gap == null) continue;
@@ -2739,6 +2763,10 @@ function fmtGap(s){
   const m = Math.floor(s / 60), r = s % 60;
   return '+' + m + ':' + String(r).padStart(2,'0');
 }
+function fmtDelta(s){
+  const m = Math.floor(s / 60), r = s % 60;
+  return '+' + (m ? m + ':' + String(r).padStart(2,'0') : r + '"');
+}
 function ago(t){
   const s = Math.round((Date.now() - t) / 1000);
   if (s < 5) return 'now';
@@ -2747,22 +2775,41 @@ function ago(t){
 }
 
 /* ---------- rendering ---------- */
-function riderChip(r){
+// una casella per classifica: posizione grande, sigla sopra, dettaglio sotto.
+// Se il corridore non è in classifica resta al suo posto ma spenta, così le
+// quattro colonne restano allineate fra un corridore e l'altro.
+function clsBox(key, tag, pos, detail){
+  const on = pos != null && pos !== '';
+  const lead = on && +pos === 1;
+  return `<span class="cls ${on ? 'on ' + key : 'off'} ${lead ? 'lead' : ''}">
+    <b>${on ? pos : '—'}</b>${tag}${on && detail ? `<i>${detail}</i>` : ''}</span>`;
+}
+function riderTile(r){
   if (!r) return '';
-  const bits = [r.team];
-  if (r.gcPos) bits.push('GC ' + r.gcPos);
-  else if (r.status) bits.push(r.status);
-  return `<button class="rchip ${freshBibs.has(r.bib) ? 'fresh' : ''} ${r.status ? 'out' : ''}" data-bib="${r.bib}">
-    ${r.jersey ? `<span class="jz j-${r.jersey}"></span>` : ''}
-    <b>${r.bib}</b><span>${r.last}</span><i>${bits.join(' · ')}</i>
+  const gcDetail = r.gcPos === 1 ? 'leader' : (r.gcGap || '').replace(/^a\s*/, '+');
+  return `<button class="rtile ${freshBibs.has(r.bib) ? 'fresh' : ''}" data-bib="${r.bib}">
+    ${r.jersey ? `<span class="rjz j-${r.jersey}"></span>` : ''}
+    <div class="rtop">
+      <span class="rbibn">${r.bib}</span>
+      <span class="rname">${r.last}<em>${r.first} · ${r.teamName}</em></span>
+    </div>
+    ${r.status
+      ? `<div class="rout">${r.status}</div>`
+      : `<div class="rcls">
+          ${clsBox('gc','GC',  r.gcPos,    gcDetail)}
+          ${clsBox('pts','PTS',r.ptsPos,   r.ptsPts != null ? r.ptsPts + 'p' : '')}
+          ${clsBox('kom','KOM',r.komPos,   r.komPts != null ? r.komPts + 'p' : '')}
+          ${clsBox('yng','U25',r.youngPos, '')}
+        </div>`}
   </button>`;
 }
 
-function groupHtml(g, delta){
+function groupHtml(g, delta, ahead){
   const sp = Math.min(92, 10 + Math.max(0, delta) * 1.5);
   const known = g.riders.map(b => byBib.get(b)).filter(Boolean);
   const unknown = g.count ? Math.max(0, g.count - known.length) : 0;
   const size = g.count ? known.length + ' of ' + g.count : known.length + (known.length === 1 ? ' rider' : ' riders');
+  const d = (ahead && g.gap != null && ahead.gap != null) ? g.gap - ahead.gap : null;
   return `
   <section class="grp ${g.kind}" data-g="${g.id}" style="--sp:${sp}px">
     <div class="spacer" style="height:${sp}px"><i></i></div>
@@ -2770,14 +2817,15 @@ function groupHtml(g, delta){
       <div class="ghead">
         <button class="gap" data-act="gap">${fmtGap(g.gap)}</button>
         <button class="glabel" data-act="label">${g.label}</button>
+        ${d != null ? `<span class="gdelta" title="behind the group ahead">Δ ${fmtDelta(d)}</span>` : ''}
         <span class="gcount">${size}</span>
         <span class="gage">${ago(g.t)}</span>
         <button class="gx" data-act="del" title="Remove group">×</button>
       </div>
-      <div class="chips">
-        ${known.map(riderChip).join('')}
-        ${unknown ? `<span class="chip unk">+${unknown} unidentified</span>` : ''}
-        <button class="chip add" data-act="add">+ rider</button>
+      <div class="rgrid">
+        ${known.map(riderTile).join('')}
+        ${unknown ? `<span class="tunk">+${unknown}<br>unidentified</span>` : ''}
+        <button class="tadd" data-act="add">+ rider</button>
       </div>
     </div>
   </section>`;
@@ -2795,13 +2843,14 @@ function render(){
   let html = '';
   if (loose.length){
     html += `<div class="tray"><div class="th">Heard — no gap yet, tap to place</div>
-      <div class="chips">${loose.map(b => riderChip(byBib.get(b))).join('')}</div></div>`;
+      <div class="rgrid">${loose.map(b => riderTile(byBib.get(b))).join('')}</div></div>`;
   }
-  let prev = 0;
+  let prev = 0, ahead = null;
   for (const g of groups){
     const delta = (g.gap == null ? 25 : g.gap) - prev;
     if (g.gap != null) prev = g.gap;
-    html += groupHtml(g, delta);
+    html += groupHtml(g, delta, ahead);
+    ahead = g;
   }
   boardEl.innerHTML = html || (loose.length ? '' : BOARD_EMPTY);
   const tot = groups.reduce((n,g) => n + Math.max(g.riders.length, g.count || 0), 0) + loose.length;
@@ -3313,8 +3362,27 @@ const KIND_WORDS = [
 ];
 const KIND_LABEL = { head:'Breakaway', chase:'Chasers', bunch:'Peloton', tail:'Gruppetto' };
 const RIDERW = '(?:corredores?|ciclistas?|corridori|coureurs?|riders?|hombres|uomini|unidades|contraatacantes?|contrattaccanti|perseguidores?|inseguitori|chasers?|poursuivants?|fugados?|escapados?|counterattackers?)';
-const COUNT_RE  = new RegExp('\\b(?:grupo|gruppo|groupe|group)\\s+(?:de|di|of)\\s+(\\d{1,2})\\b|\\b(\\d{1,2})\\s*'+RIDERW+'\\b');
-const ADV_RE    = /\b(sobre|sul|sullo|sulla|sui|sugli|su|sur|on|ventaja|vantaggio|advantage|lead|leading|ahead|davanti|delante)\b/;
+// quante persone sono. Ogni schema dice anche cosa togliere dalla frase:
+//  all    tutto (il numero non serve piu')
+//  digits solo le cifre, la parola serve per capire il tipo di gruppo
+//  lead   solo il numero iniziale, il resto e' il distacco da leggere dopo
+const COUNT_PATTERNS = [
+  { re: new RegExp('\\b(?:grupo|gruppo|groupe|group)\\s+(?:de|di|of)\\s+(\\d{1,2})\\b'), strip:'all' },
+  { re: new RegExp('\\b(\\d{1,2})\\s*'+RIDERW+'\\b'), strip:'digits' },
+  { re: /\b(?:altri|altre|altro|otros|otras|otro|another|other|more|encore|autres|ancora)\s+(\d{1,2})\b/, strip:'all' },
+  { re: /\b(\d{1,2})\s+(?:a|at|con|with|de|di|dietro|behind)\s+\d{1,3}\s*sec\b/, strip:'lead' }
+];
+const ADV_RE    = /\b(ventaja|vantaggio|advantage|lead|leading)\b/;
+
+/* Da dove è misurato il distacco. "cinque a quindici dai primi" e
+   "cinque a quindici dal gruppo" mettono lo stesso gruppo in due punti
+   opposti della strada, quindi il riferimento va letto esplicitamente. */
+const PREP = '(?:de|del|della|dello|dei|dai|dal|dalla|du|des|from|on|sobre|sul|sullo|sulla|sui|su|sur|rispetto a[l]?)';
+const REF_PATTERNS = [
+  ['prev',  new RegExp('\\b'+PREP+'\\s+(?:el|il|la|le|the|los)?\\s*(?:grupo|gruppo|groupe|group)?\\s*(?:anterior|precedente|davanti|delante|delantero|ahead|in front|previous)\\b')],
+  ['head',  new RegExp('\\b'+PREP+'\\s+(?:los|i|the|la|le)?\\s*(?:primeros?|primi|prima|cabeza|testa|tete|leaders?|front|head|fuga|escapada|escapados|fugados)\\b')],
+  ['bunch', new RegExp('\\b'+PREP+'\\s+(?:el|il|le|la|the)?\\s*(?:peloton|pelotone|grupo|gruppo|plotone|bunch|main group)\\b')]
+];
 
 // I minuti li riduco a secondi PRIMA di spezzare la frase, altrimenti
 // "un minuto e trenta" si spacca in due sulla congiunzione e diventa 60.
@@ -3330,15 +3398,25 @@ function foldTimes(text){
 }
 
 function readSegment(seg, lang){
-  const out = { gap:null, count:null, kind:null, adv:false, riders:[] };
+  const out = { gap:null, count:null, kind:null, ref:null, riders:[] };
   let s = ' ' + seg + ' ';
-  const c = COUNT_RE.exec(s);
-  if (c){
-    out.count = +(c[1] || c[2]);
-    // "grupo de otto" sparisce del tutto, "cinque contrattaccanti" perde solo
-    // il numero: la parola serve ancora per capire di che gruppo si tratta
-    s = s.replace(c[0], c[1] != null ? ' ' : ' ' + c[0].replace(/\d+/g,'') + ' ');
+  for (const p of COUNT_PATTERNS){
+    const m = p.re.exec(s);
+    if (!m) continue;
+    out.count = +m[1];
+    s = s.replace(m[0],
+      p.strip === 'all'    ? ' ' :
+      p.strip === 'digits' ? ' ' + m[0].replace(/\d+/g,'') + ' ' :
+                             ' ' + m[0].replace(/^\s*\d+\s*/,'') + ' ');
+    break;
   }
+  // il riferimento va letto e tolto PRIMA del tipo di gruppo, altrimenti
+  // "a quindici secondi dalla fuga" verrebbe scambiato per la fuga stessa
+  for (const [name, re] of REF_PATTERNS){
+    const m = re.exec(s);
+    if (m){ out.ref = name; s = s.replace(m[0], ' '); break; }
+  }
+  if (!out.ref && ADV_RE.test(s)) out.ref = 'bunch';
   for (const k of KIND_WORDS) if (k.re.test(s)){ out.kind = k.kind; break; }
   for (const p of GAP_PATTERNS){
     const m = p.re.exec(s);
@@ -3348,7 +3426,6 @@ function readSegment(seg, lang){
     const m = BARE_GAP.exec(s);
     if (m && +m[1] <= 600){ out.gap = +m[1]; s = s.replace(m[0], ' '); }
   }
-  out.adv = ADV_RE.test(s);
   out.riders = detect(s, lang).hits.map(h => h.rider);
   return out;
 }
@@ -3360,6 +3437,20 @@ function ensureHead(){
 }
 function kindFromGap(gap){ return gap === 0 ? 'head' : 'chase'; }
 
+// trova o crea il gruppo che sta a `abs` secondi dalla testa della corsa
+function resolveAt(abs, kind){
+  abs = Math.max(0, Math.round(abs));
+  let g = groupByGap(abs);
+  // fuga, gruppo e gruppetto sono unici; di contrattacchi ce ne possono essere tanti
+  if (!g && kind && kind !== 'chase') g = groups.find(x => x.kind === kind);
+  if (!g) g = makeGroup(abs, KIND_LABEL[kind] || 'Group', kind || kindFromGap(abs));
+  g.gap = abs; g.t = Date.now();
+  if (kind){ g.kind = kind; g.label = KIND_LABEL[kind]; }
+  return g;
+}
+
+let lastRefGroup = null;   // ultimo gruppo nominato, anche in frasi precedenti
+
 function applySituation(raw, lang){
   const text = foldTimes(wordsToDigits(normP(raw), lang));
   const segs = text.split(/\s*,\s*|\s+(?:y|e|et|and|mientras|mentre|while)\s+/)
@@ -3370,28 +3461,35 @@ function applySituation(raw, lang){
     const info = readSegment(seg, lang);
     if (info.gap == null && !info.kind && !info.riders.length) continue;
 
-    // un gruppo "di testa" non puo' stare dietro: se sento testa + distacco,
-    // il distacco e' il vantaggio che ha, quindi vale per il gruppo
-    if (info.kind === 'head' && info.gap > 0) info.adv = true;
-
-    // "venti secondi sul gruppo": chi parla e' davanti, il gruppo e' a quel distacco
-    if (info.adv && info.gap != null){
-      const head = ensureHead();
-      let bunch = groups.find(g => g.kind === 'bunch') || makeGroup(info.gap, 'Peloton', 'bunch');
-      bunch.gap = info.gap; bunch.t = Date.now();
-      if (info.count) head.count = info.count;
-      info.riders.forEach(r => { heardHow.set(r.bib,'radio'); place(r.bib, head); });
-      pending.splice(0).forEach(r => place(r.bib, head));
-      last = head; firstGroup = firstGroup || head; touched = true; continue;
-    }
+    // un gruppo "di testa" non puo' stare dietro: se sento testa + distacco
+    // senza altro riferimento, quel tempo e' il vantaggio sul gruppo
+    if (info.kind === 'head' && info.gap > 0 && !info.ref) info.ref = 'bunch';
 
     let g = null;
     if (info.gap != null){
-      g = groupByGap(info.gap) || (info.kind && groups.find(x => x.kind === info.kind && x.kind !== 'chase'));
-      if (!g) g = makeGroup(info.gap, KIND_LABEL[info.kind] || 'Group', info.kind || kindFromGap(info.gap));
-      g.gap = info.gap; g.t = Date.now();
-      if (info.kind){ g.kind = info.kind; g.label = KIND_LABEL[info.kind]; }
-      if (info.gap > 0) ensureHead();
+      if (info.ref === 'bunch'){
+        // distacco misurato dal gruppo: chi e' nominato sta DAVANTI di tanto
+        const bunch = groups.find(x => x.kind === 'bunch');
+        if (bunch && bunch.gap != null){
+          g = resolveAt(bunch.gap - info.gap, info.kind === 'bunch' ? null : info.kind);
+        } else {
+          const b = bunch || makeGroup(info.gap, 'Peloton', 'bunch');
+          b.gap = info.gap; b.kind = 'bunch'; b.label = 'Peloton'; b.t = Date.now();
+          g = (info.kind && info.kind !== 'head' && info.kind !== 'bunch')
+                ? resolveAt(0, info.kind) : ensureHead();
+        }
+      } else if (info.ref === 'prev'){
+        // "a dieci dal gruppo precedente": si somma a quello nominato prima,
+        // anche se era nella frase precedente
+        const ref = (last && last.gap != null) ? last : lastRefGroup;
+        const base = ref && ref.gap != null ? ref.gap : 0;
+        g = resolveAt(base + info.gap, info.kind);
+        ensureHead();
+      } else {
+        // riferimento implicito o esplicito ai primi
+        g = resolveAt(info.gap, info.kind);
+        if (info.gap > 0) ensureHead();
+      }
     } else if (info.kind){
       g = groups.find(x => x.kind === info.kind);
       if (!g) g = makeGroup(info.kind === 'head' ? 0 : null, KIND_LABEL[info.kind], info.kind);
@@ -3414,6 +3512,7 @@ function applySituation(raw, lang){
   }
   // nomi rimasti senza gruppo: se nella frase un gruppo c'era, vanno lì
   pending.forEach(r => { heardHow.set(r.bib,'radio'); place(r.bib, firstGroup || null); });
+  if (last) lastRefGroup = last;
   if (touched) render();
 }
 
@@ -3491,7 +3590,7 @@ menu.addEventListener('click', e => {
 });
 
 boardEl.addEventListener('click', e => {
-  const chip = e.target.closest('.rchip');
+  const chip = e.target.closest('.rtile');
   if (chip) return riderMenu(+chip.dataset.bib);
   const act = e.target.closest('[data-act]');
   if (!act) return;
