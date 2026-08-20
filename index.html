@@ -74,9 +74,8 @@
   .empty{color:var(--muted); font-size:13px; line-height:1.5}
 
   /* ---------- called riders ---------- */
-  .mainhead{padding:14px 20px 8px; display:flex; justify-content:space-between; align-items:baseline; gap:12px}
-  .cards{flex:1; overflow-y:auto; padding:6px 20px 28px; display:grid; gap:11px;
-         grid-template-columns:repeat(auto-fill,minmax(272px,1fr)); align-content:start}
+  .mainhead{padding:0 0 10px; display:flex; justify-content:space-between; align-items:baseline; gap:12px}
+  .cards{display:grid; gap:11px; grid-template-columns:repeat(auto-fill,minmax(272px,1fr)); align-content:start}
   .card{
     display:grid; grid-template-columns:62px 1fr; gap:12px; align-items:start;
     background:var(--panel); border:1px solid var(--line); border-radius:12px;
@@ -135,26 +134,48 @@
     .tlrow .chips{grid-column:1 / -1}
   }
   .hint{color:var(--muted); font-size:12px; line-height:1.5}
-  .roster{border-top:1px solid var(--line); max-height:46vh; overflow-y:auto; padding:0 20px 20px; display:none}
-  .roster.open{display:block}
+  .tabs{display:flex; gap:2px; padding:8px 20px 0; overflow-x:auto; border-bottom:1px solid var(--line)}
+  .tab{background:transparent; border:0; border-bottom:2px solid transparent; color:var(--muted);
+       font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+       padding:9px 12px; cursor:pointer; white-space:nowrap; min-height:40px}
+  .tab.on{color:#fff; border-bottom-color:var(--morado)}
+  .panels{flex:1; overflow-y:auto; min-height:0}
+  .panel{display:none; padding:12px 20px 26px}
+  .panel.on{display:block}
+
+  /* schema della corsa, in stile tracker */
+  .road{position:relative; height:76px; margin:6px 0 14px; border:1px solid var(--line);
+        border-radius:11px; background:linear-gradient(90deg,#1B1F27,#14171D); overflow:hidden}
+  .roadline{position:absolute; left:0; right:0; top:44px; height:2px; background:var(--line)}
+  .pin{position:absolute; top:12px; transform:translateX(-50%); text-align:center; width:96px}
+  .pin b{display:block; font-family:var(--cond); font-size:19px; line-height:1}
+  .pin span{display:block; font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:2px}
+  .pin i{display:block; width:11px; height:11px; border-radius:50%; margin:6px auto 0;
+         background:var(--muted); border:2px solid var(--ink)}
+  .pin.front b{color:var(--morado)} .pin.front i{background:var(--morado)}
+  .pin.pel i{background:#7E8794}
+  .pin.chase i{background:var(--verde)}
+
+  .tablewrap{max-width:100%}
+  table.cl{width:100%; border-collapse:collapse; font-size:13px}
+  table.cl th{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+              color:var(--muted); text-align:left; font-weight:500; padding:6px 8px; border-bottom:1px solid var(--line)}
+  table.cl td{padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:middle}
+  table.cl tr:hover td{background:var(--panel)}
+  table.cl .pos{font-family:var(--mono); color:var(--muted); width:34px}
+  table.cl .bib{font-family:var(--cond); font-weight:700; font-size:17px; width:44px}
+  table.cl .nm{font-family:var(--cond); font-weight:700; font-size:16px; letter-spacing:.01em}
+  table.cl .nm small{font-family:var(--body); font-weight:400; font-size:11px; color:var(--muted); margin-left:6px}
+  table.cl .tm{color:var(--muted); font-size:11px}
+  table.cl .val{font-family:var(--mono); text-align:right; white-space:nowrap}
+  table.cl tr.here{box-shadow:inset 3px 0 0 var(--verde)}
+  table.cl tr.here.f{box-shadow:inset 3px 0 0 var(--morado)}
+  table.cl tr td:first-child{border-radius:4px 0 0 4px}
+  .jbadge{display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px; vertical-align:1px}
   .rrow{display:grid; grid-template-columns:44px 1fr auto; gap:10px; align-items:center;
         padding:9px 0; border-bottom:1px solid var(--line); cursor:pointer; font-size:14px}
   .rbib{font-family:var(--cond); font-weight:700; font-size:20px; text-align:right; color:#fff}
   .rteam{font-family:var(--mono); font-size:11px; color:var(--muted)}
-  .sheet{position:fixed; inset:0; background:rgba(8,9,12,.78); display:none; z-index:50; padding:24px; overflow-y:auto}
-  .sheet.open{display:block}
-  .sheetbox{max-width:720px; margin:0 auto; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px}
-  .sheetbox h2{font-family:var(--cond); font-weight:700; font-size:24px; margin:0 0 4px}
-  .sheetbox p{color:var(--muted); font-size:13px; line-height:1.55; margin:0 0 14px}
-  .drop{border:1px dashed var(--line); border-radius:10px; padding:22px; text-align:center; color:var(--muted); font-size:13px; margin-bottom:12px}
-  .drop.hot{border-color:var(--morado); color:var(--text)}
-  textarea{width:100%; min-height:150px; background:var(--panel2); color:var(--text); border:1px solid var(--line);
-           border-radius:8px; padding:11px; font-family:var(--mono); font-size:11px; line-height:1.5; resize:vertical}
-  .result{font-size:13px; line-height:1.7; margin:12px 0; color:#C3C9D3}
-  .result b{color:#fff}
-  .result .bad{color:var(--rojo)}
-  .primary{background:var(--morado); color:#fff; border:0; border-radius:9px; padding:13px 18px; font-size:14px; font-weight:600; cursor:pointer; min-height:48px}
-  .primary:disabled{background:#333842; color:var(--muted); cursor:default}
   .note{padding:10px 20px 18px; color:var(--muted); font-size:12px; line-height:1.55; border-top:1px solid var(--line)}
   .note b{color:#C3C9D3; font-weight:600}
 </style>
@@ -182,7 +203,7 @@
         </select>
       </div>
       <div class="row">
-        <input id="manual" inputmode="numeric" placeholder="Type or dictate a phrase — press enter">
+        <input id="manual" inputmode="numeric" placeholder="Phrase, or command: front 11 12 13 · g2 21 22 +30 · peloton +55">
       </div>
       <div class="row">
         <select id="device" style="flex:1"><option value="">default microphone</option></select>
@@ -211,20 +232,38 @@
   </aside>
 
   <main class="main">
-    <div class="situation" id="situation"></div>
-
-    <div class="mainhead">
-      <span class="label">Called on the road</span>
-      <span class="label" id="count"></span>
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-tab="situation">Situation</button>
+      <button class="tab" data-tab="called">Called</button>
+      <button class="tab" data-tab="gc">GC</button>
+      <button class="tab" data-tab="points">Points</button>
+      <button class="tab" data-tab="kom">KOM</button>
+      <button class="tab" data-tab="youth">Youth</button>
+      <button class="tab" data-tab="roster">Start list</button>
     </div>
-    <div class="cards" id="cards"></div>
 
-    <div class="roster" id="roster">
-      <div class="feedhead" style="padding-left:0;padding-right:0">
-        <span class="label">Start list</span>
-      </div>
-      <input id="search" placeholder="Search bib, surname or team">
-      <div id="rosterList"></div>
+    <div class="panels">
+      <section class="panel on" id="p-situation">
+        <div class="road" id="road"></div>
+        <div class="situation" id="situation"></div>
+      </section>
+
+      <section class="panel" id="p-called">
+        <div class="mainhead"><span class="label">Called on the road</span><span class="label" id="count"></span></div>
+        <div class="cards" id="cards"></div>
+      </section>
+
+      <section class="panel" id="p-gc"><div class="tablewrap" id="t-gc"></div></section>
+      <section class="panel" id="p-points"><div class="tablewrap" id="t-points"></div></section>
+      <section class="panel" id="p-kom"><div class="tablewrap" id="t-kom"></div></section>
+      <section class="panel" id="p-youth"><div class="tablewrap" id="t-youth"></div></section>
+
+      <section class="panel" id="p-roster">
+        <div class="tablewrap">
+          <input id="search" placeholder="Search bib, surname or team" style="margin-bottom:10px">
+          <div id="rosterList"></div>
+        </div>
+      </section>
     </div>
 
     <div class="note">
@@ -2546,6 +2585,7 @@ function refAfter(tail){
 }
 
 const RE_COUNT = /\b(\d{1,3})\s*(?:corridor[ie]|ciclist[ai]|uomini|atlet[ie]|unita|inseguitor[ie]|fuggitiv[oi]|battistrada|attaccant[ie]|scappat[oi]|element[oi]|riders?|men|coureurs?|corredores?|hombres|echapp[eé]s?|leaders?)\b/g;
+const RE_ARTNUM = /\b(?:i|gli|le|los|las|les|the)\s+(\d{1,3})\b(?!\s*(?:secondi|secondo|minuti|minuto|segundos|seconds))/g;
 const RE_OTHERS = /\b(?:altri|altre|ancora|otros|otras|autres|other|another)\s+(\d{1,3})\b/g;
 const RE_GROUPOF = /\b(?:gruppetto|grupp?o|grupo|group|groupe)\s+(?:di|de|of)\s+(\d{1,3})\b/g;
 
@@ -2556,6 +2596,7 @@ function extractTimes(t){
   masked = masked.replace(RE_COUNT,   (m,n) => { count = +n; return ' ~ '; });
   masked = masked.replace(RE_GROUPOF, (m,n) => { count = +n; return ' ~ '; });
   masked = masked.replace(RE_OTHERS,  (m,n) => { count = +n; return ' ~ '; });
+  masked = masked.replace(RE_ARTNUM,  (m,n) => { count = count || +n; return ' ~ '; });
   const pats = [
     [/(\d{1,2})\s*[:'’]\s*(\d{2})/g,                       m => +m[1]*60 + +m[2]],
     [/\b(\d{1,2})\s*(?:minuti|minuto|minutos|minutes|min)\b(?:\s*(?:e|y|et)?\s*(\d{1,2}))?/g,
@@ -2563,6 +2604,9 @@ function extractTimes(t){
     [/\b(\d{1,3})\s*(?:secondi|secondo|segundos|secondes|seconds|sec)\b/g, m => +m[1]],
     [/\b(?:a|con|di|at|with|sobre|su)\s+(\d{1,3})\b(?=[^,.;]{0,32}(?:gruppo|grupo|plotone|peloton|pelot[oó]n|primi|testa|battistrada|fuga|vantaggio|ritardo|davanti|dietro))/g,
                                                             m => +m[1]],
+    // "il vantaggio e' di 45", "il distacco sale a 2 10", "passano con 30"
+    [/\b(?:vantaggio|distacco|ritardo|ventaja|diferencia|gap|avance)\D{0,14}(\d{1,3})(?:\s*[:'’]\s*(\d{2}))?/g,
+                                                            m => (+m[1] * (m[2] ? 60 : 1)) + (+m[2] || 0)],
   ];
   for (const [rx, calc] of pats){
     masked = masked.replace(rx, (...a) => {
@@ -2791,8 +2835,39 @@ cardsEl.addEventListener('click', e => {
 
 /* una frase intera passa dallo stesso motore dell'ascolto:
    sulla tastiera iOS puoi usare il tasto microfono e dettarla */
+/* comandi rapidi: "front 11 12 13" · "g2 21 22 23 +30" · "peloton +55" · "reset" */
+function tryCommand(raw){
+  const s = raw.trim().toLowerCase();
+  if (/^(reset|clear|azzera)$/.test(s)){
+    race.groups = []; race.pelotonGap = null; race.note = '';
+    renderSituation(); renderRoad(); renderAllTables(); return true;
+  }
+  const m = s.match(/^(front|testa|g(\d)|gruppo|peloton|plotone)\s*(.*)$/);
+  if (!m) return false;
+  const rest = m[3] || '';
+  const gapM = rest.match(/\+?\s*(?:(\d{1,2})[:'’])?(\d{1,3})"?\s*$/);
+  const gap  = gapM ? (+(gapM[1] || 0) * 60 + +gapM[2]) : null;
+  const bibs = (rest.replace(/\+?\s*(?:\d{1,2}[:'’])?\d{1,3}"?\s*$/, '')
+                  .match(/\d{1,3}/g) || []).map(Number).filter(b => byBib.has(b));
+  if (/^(peloton|plotone|gruppo)$/.test(m[1])){
+    if (gap === null) return false;
+    race.pelotonGap = gap;
+  } else {
+    const idx = m[1] === 'front' || m[1] === 'testa' ? 0 : (+m[2] || 1) - 1;
+    while (race.groups.length <= idx) race.groups.push({riders:new Set(), gap: idx === 0 ? 0 : (gap ?? 0), size:0});
+    const g = race.groups[idx];
+    bibs.forEach(b => { dropEverywhere(b); g.riders.add(b); });
+    g.size = Math.max(g.size || 0, g.riders.size);
+    if (gap !== null && idx > 0) g.gap = gap;
+  }
+  race.note = 'set by hand';
+  tidy(); renderSituation(); renderRoad(); renderAllTables();
+  return true;
+}
+
 function feedPhrase(txt, how){
   if (!txt || !txt.trim()) return false;
+  if (tryCommand(txt)) return true;
   const n = parseInt(txt, 10);
   if (String(n) === txt.trim() && byBib.has(n)){ addRider(byBib.get(n), 'manual'); return true; }
   const {hits, marks} = detect(txt, langSel.value);
@@ -2835,10 +2910,13 @@ demoBtn.onclick = () => {
   })();
 };
 
-document.getElementById('clear').onclick = () => { called.length = 0; race.groups = []; race.pelotonGap = null; race.note = ''; render(); renderSituation(); };
+document.getElementById('clear').onclick = () => { called.length = 0; race.groups = []; race.pelotonGap = null; race.note = ''; render(); renderSituation(); renderRoad(); };
 
-const rosterEl = document.getElementById('roster');
-document.getElementById('toggleRoster').onclick = () => rosterEl.classList.toggle('open');
+function openTab(name){
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + name));
+}
+document.getElementById('toggleRoster').onclick = () => { openTab('roster'); renderAllTables(); };
 
 function renderRoster(q=''){
   const s = norm(q).trim();
@@ -3029,7 +3107,7 @@ function applyData(d){
   buildIndexes();
   document.getElementById('race').textContent = DATA.race || '';
   document.getElementById('stage').textContent = DATA.stage || '';
-  called.length = 0; render(); renderSituation(); renderRoster(document.getElementById('search').value || '');
+  called.length = 0; render(); renderSituation(); renderRoad(); renderAllTables(); renderRoster(document.getElementById('search').value || '');
 }
 
 /* ---------- interfaccia ---------- */
@@ -3109,7 +3187,7 @@ function gcSeconds(r){
 }
 const mmss = s => s < 60 ? s + '"' : Math.floor(s/60) + "'" + String(s%60).padStart(2,'0') + '"';
 
-const RE_GO    = /\b(?:scatt|attacc|contrattacc|ataca|atacan|attaque|attack|escono|esce|usciti|si sono staccati|si stacca|staccat|se ne vanno|vanno via|partit|escapad|fuga|allunga|break|va via|salen|se van)/;
+const RE_GO    = /\b(?:scatt|attacc|contrattacc|ataca|atacan|attaque|attack|escono|esce|usciti|sgancia|si stacca|staccat|se ne vanno|vanno via|prendono il largo|si avvantaggia|partit|escapad|fuga|allunga|break|va via|salen|se van|sortent|go clear)/;
 const RE_JOIN  = /\b(?:si unisc|rientr|se une|se unen|rejoign|bridge|joins|raggiung|riprende la testa|aggancia)/;
 const RE_OVER  = /\b(?:neutraliz|ripres|riprend|richiamat|alcanzad|repris|caught|tutti insieme|gruppo compatto|gruppo unito|absorb|back together)/;
 const RE_FROM_GROUP = /\b(?:dal gruppo|dal plotone|del grupo|from the bunch|from the peloton)/;
@@ -3117,7 +3195,7 @@ const RE_FROM_GROUP = /\b(?:dal gruppo|dal plotone|del grupo|from the bunch|from
 const inAnyGroup = bib => race.groups.some(g => g.riders.has(bib));
 function dropEverywhere(bib){ race.groups.forEach(g => g.riders.delete(bib)); }
 function tidy(){
-  race.groups = race.groups.filter(g => g.riders.size || g.size);
+  race.groups = race.groups.filter(g => g.riders.size || (g.size && !g.named));
   race.groups.sort((a,b) => a.gap - b.gap);
   // gruppi allo stesso distacco si fondono
   for (let i = race.groups.length - 1; i > 0; i--){
@@ -3146,8 +3224,16 @@ function updateRace(rawText, hits, lang){
   let touched = false;
 
   if (RE_OVER.test(t)){
-    race.groups = []; race.pelotonGap = null; race.note = 'all together';
-    renderSituation(); return;
+    if (bibs.length){                                   // "il 21 e' stato ripreso"
+      bibs.forEach(dropEverywhere);
+      race.note = 'riders caught';
+    } else if (RE_CHASE.test(t) && race.groups.length > 1){
+      race.groups = [race.groups[0]];                   // ripresi solo gli inseguitori
+      race.note = 'chasers caught';
+    } else {
+      race.groups = []; race.pelotonGap = null; race.note = 'all together';
+    }
+    tidy(); renderSituation(); renderRoad(); renderAllTables(); return;
   }
 
   let tHead = times.find(x => x.ref === 'head');
@@ -3166,7 +3252,7 @@ function updateRace(rawText, hits, lang){
     bibs.forEach(b => { dropEverywhere(b); target.riders.add(b); });
     target.size = Math.max(target.size || 0, target.riders.size);
     race.note = 'group named';
-    tidy(); renderSituation(); return;
+    tidy(); renderSituation(); renderRoad(); renderAllTables(); return;
   }
 
   if ((bibs.length || count) && (RE_GO.test(t) || RE_JOIN.test(t) || RE_CHASE.test(t))){
@@ -3196,11 +3282,14 @@ function updateRace(rawText, hits, lang){
     const lead = race.groups.length ? race.groups.find(g => g.riders.size && bibs.some(b => g.riders.has(b))) : null;
     race.pelotonGap = (lead ? lead.gap : 0) + tPel.sec;
     touched = true;
-  } else if (tAny && !bibs.length){
+  } else if (tHead && !bibs.length && !count){
+    // "la fuga ha 2 minuti", "il distacco e' salito a 1'30": parla della testa
+    race.pelotonGap = tHead.sec; touched = true;
+  } else if (tAny && !bibs.length && !count){
     race.pelotonGap = tAny.sec; touched = true;
   }
 
-  if (touched){ tidy(); renderSituation(); }
+  if (touched){ tidy(); renderSituation(); renderRoad(); renderAllTables(); }
 }
 
 const groupGapOf = bib => {
@@ -3270,6 +3359,72 @@ function renderSituation(){
     btn.onclick = () => window.open('https://www.procyclingstats.com/rider/' + btn.dataset.slug, '_blank'));
 }
 renderSituation();
+
+/* ================= linguette, tabelle, schema della corsa ================= */
+const JCOL = {gc:'var(--morado)', points:'var(--verde)', kom:'var(--rojo)', young:'var(--blanco)'};
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const b = e.target.closest('.tab'); if (!b) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t === b));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.tab));
+  renderAllTables();
+});
+
+function groupIndexOf(bib){
+  const i = race.groups.findIndex(g => g.riders.has(bib));
+  return i < 0 ? null : i;
+}
+
+function clTable(rows, valHead, valOf){
+  return `<table class="cl"><thead><tr>
+      <th class="pos">#</th><th class="bib">Bib</th><th>Rider</th><th>Team</th><th class="val">${valHead}</th>
+    </tr></thead><tbody>${rows.map(r => {
+      const gi = groupIndexOf(r.bib);
+      const cls = gi === null ? '' : (gi === 0 ? 'here f' : 'here');
+      return `<tr class="${cls}" data-slug="${r.slug}">
+        <td class="pos">${r.pos}</td>
+        <td class="bib">${r.bib}</td>
+        <td class="nm">${r.jersey ? `<span class="jbadge" style="background:${JCOL[r.jersey]}"></span>` : ''}${r.last}<small>${r.first}</small></td>
+        <td class="tm">${r.teamName}</td>
+        <td class="val">${valOf(r)}</td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+function renderAllTables(){
+  const mk = (key, posKey, valHead, valOf) => {
+    const rows = DATA.riders.filter(r => r[posKey]).sort((a,b) => a[posKey] - b[posKey])
+      .map(r => ({...r, pos: r[posKey]}));
+    document.getElementById('t-' + key).innerHTML = rows.length
+      ? clTable(rows, valHead, valOf)
+      : '<div class="hint">Not in the imported communiqué.</div>';
+  };
+  mk('gc',     'gcPos',    'Time',   r => r.gcGap ? r.gcGap.replace(/^a\s*/,'+') : '—');
+  mk('points', 'ptsPos',   'Points', r => (r.ptsPts ?? '') + ' p');
+  mk('kom',    'komPos',   'Points', r => (r.komPts ?? '') + ' p');
+  mk('youth',  'youngPos', 'GC',     r => r.gcGap ? r.gcGap.replace(/^a\s*/,'+') : '—');
+
+  document.querySelectorAll('table.cl tr[data-slug]').forEach(tr =>
+    tr.onclick = () => window.open('https://www.procyclingstats.com/rider/' + tr.dataset.slug, '_blank'));
+}
+
+/* schema orizzontale: testa a sinistra, gruppo a destra */
+function renderRoad(){
+  const el = document.getElementById('road');
+  const pel = race.pelotonGap;
+  if (!race.groups.length && pel === null){ el.innerHTML = ''; el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const max = Math.max(pel || 0, ...race.groups.map(g => g.gap), 1);
+  const pos = gap => 6 + (gap / max) * 84;          // percentuale sulla strada
+  const pins = race.groups.map((g,i) => `
+    <div class="pin ${i === 0 ? 'front' : 'chase'}" style="left:${pos(g.gap)}%">
+      <b>${g.riders.size || g.size || 0}</b>
+      <span>${g.gap === 0 ? 'head' : '+' + mmss(g.gap)}</span><i></i></div>`).join('');
+  el.innerHTML = `<div class="roadline"></div>${pins}
+    <div class="pin pel" style="left:${pos(pel ?? max)}%">
+      <b>GR</b><span>${pel === null ? '—' : pel === 0 ? 'together' : '+' + mmss(pel)}</span><i></i></div>`;
+}
+
+renderAllTables();
 
 const saved = load();
 if (saved && saved.riders && saved.riders.length) applyData(saved);
