@@ -4,14 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Radio Corsa">
-<meta name="theme-color" content="#0F1115">
-<title>Radio Corsa</title>
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" href="icon-192.png">
+<title>Race Radio — listening test</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -110,85 +103,6 @@
   .out{color:var(--rojo); font-size:12px; margin-top:4px}
   .pcs{position:absolute; right:12px; bottom:10px; font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:.1em}
 
-  /* ---------- race situation board ---------- */
-  .board{flex:1; overflow-y:auto; padding:4px 20px 30px}
-  .tray{border:1px dashed #4A3B6B; border-radius:11px; padding:9px 11px; margin:6px 0 4px; background:#191722}
-  .tray .th{font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#B69AE0; margin-bottom:7px}
-  .grp{position:relative; padding-left:26px}
-  .spacer{position:relative}
-  .spacer i{position:absolute; left:9px; top:0; bottom:0; width:2px; background:linear-gradient(var(--line),var(--line)); display:block}
-  .grp::before{content:''; position:absolute; left:5px; top:calc(var(--sp,0px) + 13px); width:10px; height:10px; border-radius:50%;
-               background:var(--panel); border:2px solid var(--muted)}
-  .grp.head::before{border-color:var(--morado); background:var(--morado)}
-  .grp.chase::before{border-color:#D9A441}
-  .grp.bunch::before{border-color:var(--verde)}
-  .grp.tail::before{border-color:#5A6170}
-  .gbox{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px 12px}
-  .grp.head .gbox{border-color:#4A3B6B}
-  .ghead{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:9px}
-  .gap{font-family:var(--cond); font-weight:700; font-size:27px; line-height:1; color:#fff;
-       background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:6px 10px 5px; cursor:pointer}
-  .grp.head .gap{background:var(--morado); border-color:var(--morado)}
-  .glabel{font-family:var(--cond); font-weight:700; font-size:19px; letter-spacing:.01em; color:var(--text);
-          background:transparent; border:0; border-bottom:1px dashed var(--line); cursor:pointer; padding:2px 2px 1px}
-  .gcount{font-family:var(--mono); font-size:11px; color:var(--muted)}
-  .gage{font-family:var(--mono); font-size:10px; color:#5F6673; margin-left:auto}
-  .gx{background:transparent; border:0; color:#5F6673; font-size:19px; cursor:pointer; padding:0 4px; line-height:1}
-  .gdelta{font-family:var(--mono); font-size:10px; color:#8C94A2; border:1px solid var(--line);
-          border-radius:5px; padding:3px 6px; background:#15181F}
-  .gref{font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:#5F6673}
-  .tgl.on{border-color:var(--morado); color:#D3BEF6; background:#1E1730}
-  .tgl.off{opacity:.55; text-decoration:line-through}
-  .srcline{font-family:var(--mono); font-size:11px; color:#9AA2B0; background:#15181F; border:1px solid var(--line);
-           border-radius:7px; padding:8px 10px; margin:2px 0 12px; line-height:1.5}
-
-  /* rider tile: dorsale, nome e le quattro classifiche sempre a vista */
-  .rgrid{display:grid; gap:8px; grid-template-columns:repeat(auto-fill,minmax(236px,1fr))}
-  .rtile{position:relative; background:var(--panel2); border:1px solid var(--line); border-radius:10px;
-         padding:9px 10px 10px; text-align:left; cursor:pointer; color:inherit; overflow:hidden; font-family:inherit}
-  .rtile.fresh{border-color:var(--morado); box-shadow:0 0 0 1px var(--morado) inset}
-  .rtile:focus-visible{outline:2px solid var(--morado); outline-offset:2px}
-  .rtop{display:flex; align-items:baseline; gap:9px}
-  .rbibn{font-family:var(--cond); font-weight:700; font-size:27px; line-height:.95; color:#fff; min-width:40px}
-  .rname{font-family:var(--cond); font-weight:700; font-size:18px; line-height:1.06; letter-spacing:.01em}
-  .rname em{display:block; font-family:var(--body); font-style:normal; font-weight:500; font-size:11px;
-            color:var(--muted); letter-spacing:0; margin-top:1px}
-  .rcls{display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin-top:9px}
-  .cls{border:1px solid var(--line); border-radius:6px; padding:4px 3px 3px; text-align:center;
-       font-family:var(--mono); font-size:9px; letter-spacing:.06em; color:#7F8794; background:#15181F}
-  .cls b{display:block; font-family:var(--cond); font-size:17px; font-weight:700; color:#fff; line-height:1}
-  .cls i{display:block; font-style:normal; font-size:9px; color:#6E7686; margin-top:1px}
-  .cls.on.gc {border-color:#4B3670; background:#1A1424}
-  .cls.on.pts{border-color:#245C33; background:#111E15}
-  .cls.on.kom{border-color:#6B2723; background:#21120F}
-  .cls.on.yng{border-color:#5C5C5C; background:#1A1A1A}
-  .cls.off{opacity:.3}
-  .cls.lead b{color:#F2E38A}
-  .rjz{position:absolute; left:0; top:0; bottom:0; width:4px}
-  .rout{margin-top:8px; color:var(--rojo); font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase}
-  .tadd{border:1px dashed var(--line); border-radius:10px; background:transparent; color:var(--muted);
-        font-family:var(--mono); font-size:11px; cursor:pointer; padding:14px 10px; align-self:start}
-  .tunk{border:1px dashed var(--line); border-radius:10px; display:flex; align-items:center; justify-content:center;
-        color:var(--muted); font-family:var(--mono); font-size:11px; text-align:center; padding:10px; min-height:74px}
-  .boardempty{color:var(--muted); font-size:13px; line-height:1.6; padding:16px 2px; max-width:52ch}
-  .boardempty b{color:#C3C9D3}
-
-  /* ---------- action sheet ---------- */
-  .menu{position:fixed; inset:0; background:rgba(8,9,12,.72); display:none; z-index:60; padding:22px; overflow-y:auto}
-  .menu.open{display:flex; align-items:center; justify-content:center}
-  .menubox{width:100%; max-width:430px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px}
-  .menubox h3{font-family:var(--cond); font-weight:700; font-size:22px; margin:0 0 3px}
-  .menubox .sub{color:var(--muted); font-size:12px; margin-bottom:12px}
-  .mopt{display:block; width:100%; text-align:left; background:var(--panel2); color:var(--text);
-        border:1px solid var(--line); border-radius:9px; padding:12px; font-size:14px; margin-bottom:7px; cursor:pointer; min-height:46px}
-  .mopt small{display:block; color:var(--muted); font-size:11px; font-family:var(--mono); margin-top:2px}
-  .mopt.danger{color:#E39A95}
-  .gapedit{display:flex; gap:8px; align-items:center; margin-bottom:10px}
-  .gapedit input{width:74px; text-align:center; font-family:var(--cond); font-weight:700; font-size:26px; padding:6px}
-  .quick{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px}
-  .quick button{background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:7px;
-                padding:8px 11px; font-family:var(--mono); font-size:12px; cursor:pointer; min-height:40px}
-
   /* ---------- roster ---------- */
   .roster{border-top:1px solid var(--line); max-height:46vh; overflow-y:auto; padding:0 20px 20px; display:none}
   .roster.open{display:block}
@@ -212,26 +126,6 @@
   .primary:disabled{background:#333842; color:var(--muted); cursor:default}
   .note{padding:10px 20px 18px; color:var(--muted); font-size:12px; line-height:1.55; border-top:1px solid var(--line)}
   .note b{color:#C3C9D3; font-weight:600}
-
-  /* ---------- motore / stato ---------- */
-  #status{display:inline-flex; align-items:center; gap:6px}
-  #status::before{content:''; width:7px; height:7px; border-radius:50%; background:#555C68}
-  #status.ok::before{background:var(--verde)}
-  #status.warn::before{background:#D9A441}
-  #status.err::before{background:var(--rojo)}
-  #status.ok{color:#9AD7AC} #status.err{color:#E39A95}
-  .engpill{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase;
-           border:1px solid var(--line); border-radius:5px; padding:3px 7px; color:var(--muted); background:var(--panel2)}
-  .engpill.cloud{border-color:#4B3670; color:#C6ADEE}
-  .iconbtn{background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px;
-           min-width:46px; min-height:44px; font-size:16px; cursor:pointer}
-  .sw{display:flex; align-items:center; gap:9px; font-size:13px; color:#C3C9D3; padding:7px 0; cursor:pointer}
-  .sw input{width:auto; min-height:0; accent-color:var(--morado); transform:scale(1.2); margin:0 2px 0 0}
-  .hint{font-size:12px; color:var(--muted); line-height:1.5; margin:2px 0 10px}
-  .hint a{color:#C6ADEE}
-  .sect{border-top:1px solid var(--line); margin-top:16px; padding-top:14px}
-  .sect h3{font-family:var(--cond); font-weight:700; font-size:18px; margin:0 0 6px}
-  #nosleep{position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; left:-10px; top:-10px}
 </style>
 </head>
 <body>
@@ -239,7 +133,7 @@
 
   <aside class="side">
     <div class="head">
-      <div class="eyebrow">Race radio — continuous listening</div>
+      <div class="eyebrow">Listening test — Race radio</div>
       <h1 class="race" id="race"></h1>
       <div class="stage" id="stage"></div>
     </div>
@@ -254,13 +148,7 @@
           <option value="it-IT">Speaker in Italian</option>
           <option value="fr-FR">Speaker in French</option>
           <option value="en-US">Speaker in English</option>
-          <option value="multi">Multilingual (cloud only)</option>
         </select>
-        <button class="iconbtn" id="openSettings" title="Listening settings">⚙</button>
-      </div>
-      <div class="row" style="gap:8px">
-        <span class="engpill" id="engPill">engine —</span>
-        <span class="engpill" id="uptime" style="margin-left:auto">00:00</span>
       </div>
       <div class="row">
         <input id="manual" inputmode="numeric" placeholder="Bib by hand — press enter to add">
@@ -273,7 +161,7 @@
       </div>
       <div class="row">
         <button class="ghost" id="toggleRoster" style="flex:1">Start list</button>
-        <button class="ghost" id="clear" style="flex:1">Clear board</button>
+        <button class="ghost" id="clear" style="flex:1">Clear</button>
       </div>
       <div class="row">
         <button class="ghost" id="openImport" style="flex:1">Import communiqué</button>
@@ -282,95 +170,31 @@
 
     <div class="feedhead"><span class="label">What it hears</span><span class="label" id="status">idle</span></div>
     <div class="feed" id="feed">
-      <div class="empty" id="feedEmpty">Hit <b>Start listening</b> and let the race radio run. The words land here; bibs and surnames it recognises build the group board on the right.</div>
+      <div class="empty" id="feedEmpty">Premi <b>Start listening</b> e fai partire la registrazione della radio corsa. Le parole arrivano qui; i dorsali e i cognomi riconosciuti compaiono a destra.</div>
     </div>
   </aside>
 
   <main class="main">
     <div class="mainhead">
-      <span class="label">Race situation</span>
-      <span style="display:flex;gap:8px;align-items:center">
-        <span class="label" id="count"></span>
-        <button class="ghost tgl on" id="gapsToggle" style="padding:7px 11px;min-height:36px"
-                title="Let the radio set the gaps">⏱ gaps</button>
-        <button class="ghost" id="undoBtn" style="padding:7px 11px;min-height:36px">Undo</button>
-        <button class="ghost" id="addGroup" style="padding:7px 11px;min-height:36px">+ Group</button>
-        <button class="ghost" id="wipe" style="padding:7px 11px;min-height:36px">Reset</button>
-      </span>
+      <span class="label">Called on the road</span>
+      <span class="label" id="count"></span>
     </div>
-    <div class="board" id="board"></div>
+    <div class="cards" id="cards"></div>
 
     <div class="roster" id="roster">
       <div class="feedhead" style="padding-left:0;padding-right:0">
         <span class="label">Start list</span>
-        <span class="label" id="rosterHint"></span>
       </div>
       <input id="search" placeholder="Search bib, surname or team">
       <div id="rosterList"></div>
     </div>
 
     <div class="note">
-      Tap a rider to move him between groups or open him on ProCyclingStats; tap a gap or a label to correct it.
-      Groups build themselves from what the radio says, and it follows which reference the gap is measured from:
-      <b>"two riders twenty seconds on the bunch"</b>, <b>"another five at fifteen seconds from the leaders"</b>,
-      <b>"four more ten seconds off the group ahead"</b>. Listening restarts on its own and
-      the screen stays awake while the microphone is live. The <b>Safari</b> engine is free but iOS cuts it every so
-      often (the app stitches it back); the <b>cloud</b> engine streams without a break. Close the app and reopen it
-      offline: the race data stays on this iPad.
+      Tap a card to open the rider on ProCyclingStats. Speech recognition runs in the browser and needs
+      a connection: <b>use Safari on iPad</b>, with the page served over https. If the speaker pauses
+      for a long time, listening restarts on its own.
     </div>
   </main>
-</div>
-
-<video id="nosleep" muted playsinline loop disablepictureinpicture></video>
-
-<div class="menu" id="menu"><div class="menubox" id="menubox"></div></div>
-
-<div class="sheet" id="settings">
-  <div class="sheetbox">
-    <h2>Continuous listening</h2>
-    <p>Pick the recognition engine. Everything stays on this iPad — the key is never sent anywhere except Deepgram.</p>
-
-    <label class="label">Engine</label>
-    <select id="engine" style="width:100%; margin:6px 0 4px">
-      <option value="auto">Automatic — cloud if a key is set, otherwise Safari</option>
-      <option value="web">Safari / Web Speech — free</option>
-      <option value="cloud">Cloud streaming (Deepgram) — truly continuous</option>
-    </select>
-    <div class="hint">Web Speech is free but iOS keeps cutting it off: the app restarts it automatically, so you may
-      lose half a second now and then. The cloud engine holds one audio stream open with no time limit.</div>
-
-    <label class="label">Deepgram API key</label>
-    <input id="dgKey" type="password" autocomplete="off" placeholder="paste the key here" style="margin:6px 0 4px">
-    <div class="hint">Create one free at <a href="https://console.deepgram.com" target="_blank" rel="noopener">console.deepgram.com</a>
-      (trial credit included, then billed per minute). The key needs the <i>usage:write</i> scope.
-      It is stored only in this browser.</div>
-
-    <div class="sect">
-      <h3>Behaviour</h3>
-      <label class="sw"><input type="checkbox" id="optWake"> Keep the screen awake while listening</label>
-      <label class="sw"><input type="checkbox" id="optMeter"> Show the microphone level</label>
-      <div class="hint">With the Safari engine on iPad, leave the level meter <b>off</b>: a second microphone stream
-        can knock the recognition over.</div>
-      <label class="sw"><input type="checkbox" id="optAuto"> Resume listening when you come back to the app</label>
-    </div>
-
-    <div class="sect">
-      <h3>Not starting?</h3>
-      <div class="hint">On iPad, Safari's recogniser needs <b>Dictation</b> switched on:
-        Settings → General → Keyboard → <i>Enable Dictation</i>. The button below forces the microphone
-        permission prompt, so you can see at once whether Safari is blocking it.</div>
-      <div class="row" style="gap:8px">
-        <button class="ghost" id="testMic">Test microphone</button>
-        <span class="engpill" id="testOut" style="flex:1; text-align:center">—</span>
-      </div>
-    </div>
-
-    <div class="row" style="gap:8px; margin-top:16px">
-      <button class="primary" id="saveSettings">Save</button>
-      <button class="ghost" id="closeSettings">Close</button>
-      <span class="engpill" id="diag" style="margin-left:auto">—</span>
-    </div>
-  </div>
 </div>
 
 <div class="sheet" id="sheet">
@@ -2644,41 +2468,25 @@ function decompose(tok, dict){
   return rest === '' && sum > 0 ? sum : null;
 }
 
-// "sesenta y uno" = 61, ma "sesenta y uno y treinta y cuatro" = 61 e 34:
-// due numeri si fondono solo se la composizione ha senso (centinaia+resto,
-// decine tonde+unita'). Altrimenti la "y" e' una congiunzione e si chiude.
-function composable(acc, v){
-  if (acc >= 100 && v < 100) return true;
-  if (acc >= 20 && acc < 100 && acc % 10 === 0 && v >= 1 && v <= 9) return true;
-  return false;
-}
 function wordsToDigits(text, lang){
   const dict = W[lang] || W['es-ES'];
   const out = [];
-  let acc = 0, open = false, pendingJoin = null;
-  const flush = () => { if (open){ out.push(String(acc)); acc = 0; open = false; } };
+  let acc = 0, open = false;
   for (const tok of text.split(/\s+/)){
     if (!tok) continue;
-    if (open && JOIN.has(tok)){ pendingJoin = tok; continue; }
+    if (open && JOIN.has(tok)) continue;
     const v = decompose(tok, dict);
-    if (v !== null){
-      if (open && composable(acc, v)){ acc += v; pendingJoin = null; continue; }
-      flush();
-      if (pendingJoin){ out.push(pendingJoin); pendingJoin = null; }
-      acc = v; open = true; continue;
-    }
-    flush();
-    if (pendingJoin){ out.push(pendingJoin); pendingJoin = null; }
+    if (v !== null){ acc += v; open = true; continue; }
+    if (open){ out.push(String(acc)); acc = 0; open = false; }
     out.push(tok);
   }
-  flush();
-  if (pendingJoin) out.push(pendingJoin);
+  if (open) out.push(String(acc));
   return out.join(' ');
 }
 
 /* ---------- riconoscimento dorsali e cognomi ---------- */
 // un numero seguito da "secondi/minuti/km" e un distacco, non un dorsale
-const UNITS = /^(segundo|segundos|seg|segs|sec|secondi|secondo|secondes|seconds|minuto|minutos|minuti|minutes|minute|min|km|kilometro|kilometros|kilometri|chilometri|metros|metri|puntos|punti|points|por|ciento|corredor|corredores|ciclista|ciclistas|corridore|corridori|coureur|coureurs|rider|riders|hombres|uomini|unidades)$/;
+const UNITS = /^(segundo|segundos|seg|secondi|secondo|secondes|seconds|minuto|minutos|minuti|minutes|km|kilometro|kilometros|kilometri|chilometri|metros|metri|puntos|punti|points|por|ciento)$/;
 const PRE   = /^(kilometro|km|minuto|minuti|hora|ora|ore|horas)$/;
 
 function detect(rawText, lang){
@@ -2700,14 +2508,10 @@ function detect(rawText, lang){
   return {hits, marks, text};
 }
 
-/* ================================================================
-   RACE SITUATION
-   The road is modelled as an ordered list of groups. Each group has a
-   gap in seconds behind the head of the race (0 = the front group), an
-   optional announced size, and the bibs we have actually identified.
-   ================================================================ */
+/* ---------- stato ---------- */
+const called = [];           // {rider, how, t}
+const cardsEl = document.getElementById('cards');
 const feedEl  = document.getElementById('feed');
-const boardEl = document.getElementById('board');
 const countEl = document.getElementById('count');
 
 document.getElementById('race').textContent = DATA.race;
@@ -2715,176 +2519,39 @@ document.getElementById('stage').textContent = DATA.stage;
 
 function pcsUrl(r){ return 'https://www.procyclingstats.com/rider/' + r.slug; }
 
-let gid = 1;
-let groups = [];        // {id, gap, label, kind, count, riders:[bib], t}
-let loose  = [];        // bibs heard with no gap reference yet
-const heardHow = new Map();
-let freshBibs = new Set();
-
-const KINDS = {head:'head', chase:'chase', bunch:'bunch', tail:'tail'};
-
-function makeGroup(gap, label, kind){
-  const g = { id: gid++, gap: gap == null ? null : Math.max(0, Math.round(gap)),
-              label: label || 'Group', kind: kind || KINDS.chase, count: null, riders: [], t: Date.now() };
-  groups.push(g);
-  return g;
-}
-function groupById(id){ return groups.find(g => g.id === +id); }
-function groupByGap(gap, tol){
-  if (gap == null) return null;
-  // stretta: la radio ripete "venti"/"ventuno" per lo stesso gruppo, ma
-  // quindici e venti sono due gruppi diversi e vanno tenuti separati
-  tol = tol == null ? 3 : tol;
-  let best = null, bd = Infinity;
-  for (const g of groups){
-    if (g.gap == null) continue;
-    const d = Math.abs(g.gap - gap);
-    if (d <= tol && d < bd){ best = g; bd = d; }
-  }
-  return best;
-}
-function groupByLabel(kind){ return groups.find(g => g.kind === kind); }
-function detach(bib){
-  groups.forEach(g => { const i = g.riders.indexOf(bib); if (i >= 0) g.riders.splice(i,1); });
-  const j = loose.indexOf(bib); if (j >= 0) loose.splice(j,1);
-}
-function place(bib, g){
-  detach(bib);
-  if (g){ g.riders.unshift(bib); g.t = Date.now(); }
-  else if (!loose.includes(bib)) loose.unshift(bib);
-  freshBibs.add(bib);
-  setTimeout(() => { freshBibs.delete(bib); }, 9000);
-}
-function addRider(r, how, g){
-  if (!r) return;
-  heardHow.set(r.bib, how);
-  place(r.bib, g || null);
-  render();
-}
-function clearBoard(){ groups = []; loose = []; heardHow.clear(); freshBibs.clear(); gid = 1; lastRefGroup = null; }
-
-/* ---------- annulla ---------- */
-const history = [];
-function snapshot(){
-  history.push(JSON.stringify({ groups, loose, gid }));
-  if (history.length > 40) history.shift();
-  const u = document.getElementById('undoBtn');
-  if (u) u.disabled = false;
-}
-function undo(){
-  const s = history.pop();
-  if (!s) return;
-  const d = JSON.parse(s);
-  groups = d.groups; loose = d.loose; gid = d.gid; lastRefGroup = null;
-  render();
-}
-
-/* ---------- formattazione ---------- */
-function fmtGap(s){
-  if (s == null) return '?';
-  if (s === 0) return 'HEAD';
-  const m = Math.floor(s / 60), r = s % 60;
-  return '+' + m + ':' + String(r).padStart(2,'0');
-}
-function fmtDelta(s){
-  const m = Math.floor(s / 60), r = s % 60;
-  return '+' + (m ? m + ':' + String(r).padStart(2,'0') : r + '"');
-}
-function ago(t){
-  const s = Math.round((Date.now() - t) / 1000);
-  if (s < 5) return 'now';
-  if (s < 60) return s + 's ago';
-  return Math.floor(s / 60) + 'm ago';
-}
-
-/* ---------- rendering ---------- */
-// una casella per classifica: posizione grande, sigla sopra, dettaglio sotto.
-// Se il corridore non è in classifica resta al suo posto ma spenta, così le
-// quattro colonne restano allineate fra un corridore e l'altro.
-function clsBox(key, tag, pos, detail){
-  const on = pos != null && pos !== '';
-  const lead = on && +pos === 1;
-  return `<span class="cls ${on ? 'on ' + key : 'off'} ${lead ? 'lead' : ''}">
-    <b>${on ? pos : '—'}</b>${tag}${on && detail ? `<i>${detail}</i>` : ''}</span>`;
-}
-function riderTile(r){
-  if (!r) return '';
-  const gcDetail = r.gcPos === 1 ? 'leader' : (r.gcGap || '').replace(/^a\s*/, '+');
-  return `<button class="rtile ${freshBibs.has(r.bib) ? 'fresh' : ''}" data-bib="${r.bib}">
-    ${r.jersey ? `<span class="rjz j-${r.jersey}"></span>` : ''}
-    <div class="rtop">
-      <span class="rbibn">${r.bib}</span>
-      <span class="rname">${r.last}<em>${r.first} · ${r.teamName}</em></span>
-    </div>
-    ${r.status
-      ? `<div class="rout">${r.status}</div>`
-      : `<div class="rcls">
-          ${clsBox('gc','GC',  r.gcPos,    gcDetail)}
-          ${clsBox('pts','PTS',r.ptsPos,   r.ptsPts != null ? r.ptsPts + 'p' : '')}
-          ${clsBox('kom','KOM',r.komPos,   r.komPts != null ? r.komPts + 'p' : '')}
-          ${clsBox('yng','U25',r.youngPos, '')}
-        </div>`}
-  </button>`;
-}
-
-function groupHtml(g, delta, ahead){
-  const sp = Math.min(92, 10 + Math.max(0, delta) * 1.5);
-  const known = g.riders.map(b => byBib.get(b)).filter(Boolean);
-  const unknown = g.count ? Math.max(0, g.count - known.length) : 0;
-  const size = g.count ? known.length + ' of ' + g.count : known.length + (known.length === 1 ? ' rider' : ' riders');
-  const d = (ahead && g.gap != null && ahead.gap != null) ? g.gap - ahead.gap : null;
+function cardHtml(entry){
+  const r = entry.rider;
+  const chips = [];
+  if (r.gcPos) chips.push(`<span class="chip gc">GC <b>${r.gcPos}</b> ${r.gcGap.replace('a ','+')}</span>`);
+  if (r.ptsPos) chips.push(`<span class="chip pts">Points <b>${r.ptsPos}</b> ${r.ptsPts}p</span>`);
+  if (r.komPos) chips.push(`<span class="chip kom">KOM <b>${r.komPos}</b> ${r.komPts}p</span>`);
+  if (r.youngPos) chips.push(`<span class="chip yng">Young <b>${r.youngPos}</b></span>`);
   return `
-  <section class="grp ${g.kind}" data-g="${g.id}" style="--sp:${sp}px">
-    <div class="spacer" style="height:${sp}px"><i></i></div>
-    <div class="gbox">
-      <div class="ghead">
-        <button class="gap" data-act="gap">${fmtGap(g.gap)}</button>
-        <button class="glabel" data-act="label">${g.label}</button>
-        ${d != null ? `<span class="gdelta" title="behind the group ahead">Δ ${fmtDelta(d)}</span>` : ''}
-        <span class="gcount">${size}</span>
-        <span class="gage">${ago(g.t)}</span>
-        <button class="gx" data-act="del" title="Remove group">×</button>
+    <button class="card fresh" data-slug="${r.slug}">
+      ${r.jersey ? `<span class="jersey j-${r.jersey}"></span>` : ''}
+      <div class="plate">${r.bib}<small>${entry.how}</small></div>
+      <div>
+        <div class="name">${r.last}<span class="fn">${r.first}</span></div>
+        <div class="team">${r.teamName}</div>
+        ${r.status ? `<div class="out">${r.status}</div>` : `<div class="stats">${chips.join('')}</div>`}
+        <span class="pcs">PCS ↗</span>
       </div>
-      <div class="rgrid">
-        ${known.map(riderTile).join('')}
-        ${unknown ? `<span class="tunk">+${unknown}<br>unidentified</span>` : ''}
-        <button class="tadd" data-act="add">+ rider</button>
-      </div>
-    </div>
-  </section>`;
+    </button>`;
 }
 
-const BOARD_EMPTY = `<div class="boardempty">
-  Nothing on the road yet. Start listening and the groups build themselves: say a gap and the
-  riders named around it land in that group — <b>"two riders twenty seconds on the bunch"</b>,
-  <b>"five chasers at ten seconds"</b>, <b>"the peloton at a minute thirty"</b>.<br><br>
-  Anything the radio gets wrong you fix by tapping: the gap, the label, or a rider to move him.
-  <b>+ Group</b> adds one by hand.</div>`;
+function addRider(r, how){
+  const i = called.findIndex(e => e.rider.bib === r.bib);
+  if (i >= 0) called.splice(i,1);
+  called.unshift({rider:r, how});
+  if (called.length > 24) called.pop();
+  render();
+}
 
 function render(){
-  groups.sort((a,b) => (a.gap == null ? 1e9 : a.gap) - (b.gap == null ? 1e9 : b.gap));
-  let html = '';
-  if (loose.length){
-    html += `<div class="tray"><div class="th">Heard — no gap yet, tap to place</div>
-      <div class="rgrid">${loose.map(b => riderTile(byBib.get(b))).join('')}</div></div>`;
-  }
-  let prev = 0, ahead = null;
-  for (const g of groups){
-    const delta = (g.gap == null ? 25 : g.gap) - prev;
-    if (g.gap != null) prev = g.gap;
-    html += groupHtml(g, delta, ahead);
-    ahead = g;
-  }
-  boardEl.innerHTML = html || (loose.length ? '' : BOARD_EMPTY);
-  const tot = groups.reduce((n,g) => n + Math.max(g.riders.length, g.count || 0), 0) + loose.length;
-  countEl.textContent = tot ? tot + ' riders · ' + groups.length + ' groups' : '';
+  cardsEl.innerHTML = called.map(cardHtml).join('');
+  countEl.textContent = called.length ? called.length + ' riders' : '';
+  setTimeout(()=> cardsEl.querySelectorAll('.fresh').forEach((el,i)=>{ if(i>0) el.classList.remove('fresh'); }), 50);
 }
-setInterval(() => {
-  document.querySelectorAll('.grp').forEach(el => {
-    const g = groupById(el.dataset.g);
-    if (g) { const a = el.querySelector('.gage'); if (a) a.textContent = ago(g.t); }
-  });
-}, 5000);
 
 function pushUtterance(text, marks, live){
   document.getElementById('feedEmpty')?.remove();
@@ -2902,786 +2569,94 @@ function pushUtterance(text, marks, live){
   while (feedEl.children.length > 40) feedEl.lastChild.remove();
 }
 
-/* ================================================================
-   ASCOLTO CONTINUO
-   Due motori intercambiabili:
-     - WebEngine   : SpeechRecognition di Safari/Chrome, gratis, con
-                     watchdog + riavvio automatico a backoff
-     - CloudEngine : streaming PCM 16 kHz verso Deepgram su WebSocket,
-                     senza limiti di durata, con keep-alive e riconnessione
-   Più: wake lock schermo, keep-alive audio, ripresa al rientro in app.
-   ================================================================ */
+/* ---------- speech ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-const micBtn   = document.getElementById('mic');
+const micBtn = document.getElementById('mic');
 const micLabel = document.getElementById('micLabel');
 const statusEl = document.getElementById('status');
-const langSel  = document.getElementById('lang');
-const engPill  = document.getElementById('engPill');
-const uptimeEl = document.getElementById('uptime');
-const vuEl     = document.getElementById('vu');
+const langSel = document.getElementById('lang');
+let rec = null, listening = false, fails = 0;
+const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-/* ---------- configurazione ---------- */
-const CFG_KEY = 'radio-corsa-cfg';
-const cfg = Object.assign(
-  { engine:'auto', dgKey:'', keepAwake:true, meter:!isIOS, autoResume:true, radioGaps:true },
-  (()=>{ try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch(e){ return {}; } })()
-);
-function saveCfg(){ try{ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }catch(e){} }
-
-/* ---------- stato ---------- */
-let listening = false, engine = null, micStream = null, audioCtx = null;
-let wakeLock = null, lastActivity = 0, startedAt = 0, tickTimer = null;
-
-function setStatus(txt, cls){ statusEl.textContent = txt; statusEl.className = 'label ' + (cls || ''); }
-function srLang(){ return langSel.value === 'multi' ? 'es-ES' : langSel.value; }
-
-function chosenEngine(){
-  if (cfg.engine === 'cloud') return 'cloud';
-  if (cfg.engine === 'web')   return 'web';
-  return cfg.dgKey ? 'cloud' : 'web';   // auto
+if (!SR){
+  micBtn.disabled = true;
+  micLabel.textContent = 'Listening unavailable';
+  statusEl.textContent = 'use Safari or Chrome';
 }
 
-/* ---------- testo riconosciuto -> corridori ---------- */
-function consume(txt, isFinal){
-  txt = (txt || '').trim();
-  if (!txt) return;
-  lastActivity = Date.now();
-  const {hits, marks} = detect(txt, srLang());
-  pushUtterance(txt, marks, !isFinal);
-  if (isFinal){
-    applySituation(txt, srLang());               // gruppi e distacchi
-  } else {
-    // riscontro immediato: se un corridore non e' ancora sulla board lo metto
-    // nel vassoio, poi la frase finale lo sposta nel gruppo giusto
-    let n = 0;
-    hits.forEach(h => { if (!heardHow.has(h.rider.bib)){ heardHow.set(h.rider.bib,'radio'); place(h.rider.bib, null); n++; } });
-    if (n) render();
-  }
-}
-
-/* ================= motore 1: Web Speech ================= */
-function WebEngine(){
-  let rec = null, alive = false, backoff = 200, restartT = null, watchT = null;
-
-  function spawn(){
-    if (!alive) return;
-    try { rec = new SR(); } catch(e){ setStatus('engine unavailable','err'); return; }
-    rec.lang = srLang();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.maxAlternatives = 1;
-    rec.onstart  = () => { sawEngineEvent = true; backoff = 200; lastActivity = Date.now(); setStatus('listening','ok'); };
-    rec.onaudiostart = () => { sawEngineEvent = true; lastActivity = Date.now(); };
-    rec.onerror  = e => {
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){
-        setStatus('microphone blocked','err'); stopListening(); return;
-      }
-      if (e.error === 'network') setStatus('no network','warn');
-      else setStatus('reconnecting…','warn');
-    };
-    rec.onend    = () => { if (alive) schedule(); else setStatus('idle',''); };
-    rec.onresult = ev => {
-      for (let i = ev.resultIndex; i < ev.results.length; i++){
-        const res = ev.results[i];
-        consume(res[0].transcript, res.isFinal);
-      }
-    };
-    try { rec.start(); } catch(e){ schedule(); }
-  }
-
-  function schedule(){
-    clearTimeout(restartT);
-    const wait = backoff;
-    backoff = Math.min(Math.round(backoff * 1.7), 2500);
-    restartT = setTimeout(spawn, wait);
-  }
-
-  return {
-    name: 'web',
-    label: 'Safari engine',
-    start(){
-      alive = true; spawn();
-      // se per 25 s non arriva nulla, taglio e riparto pulito
-      watchT = setInterval(() => {
-        if (!alive) return;
-        if (Date.now() - lastActivity > 25000){
-          lastActivity = Date.now();
-          setStatus('watchdog restart','warn');
-          try { rec && rec.abort(); } catch(e){}
-        }
-      }, 5000);
-    },
-    stop(){
-      alive = false; clearInterval(watchT); clearTimeout(restartT);
-      try { rec && rec.abort(); } catch(e){}
-      rec = null;
-    },
-    kick(){ try { rec && rec.abort(); } catch(e){} }
+function start(){
+  rec = new SR();
+  rec.lang = langSel.value;
+  rec.continuous = !IOS;        // iOS non regge l'ascolto continuo: sessioni brevi
+  rec.interimResults = true;
+  rec.onstart = () => { fails = 0; statusEl.textContent = 'listening'; };
+  rec.onerror = e => {
+    fails++;
+    const hint = e.error === 'service-not-allowed' ? ' — enable Dictation in iOS Settings'
+               : e.error === 'not-allowed' ? ' — microphone blocked'
+               : e.error === 'network' ? ' — no connection' : '';
+    statusEl.textContent = e.error + hint;
+    if (fails >= 4){ listening = false; micBtn.classList.remove('on'); micLabel.textContent = 'Start listening'; }
   };
-}
-
-/* ================= motore 2: Deepgram streaming ================= */
-function CloudEngine(){
-  let ws = null, alive = false, keepT = null, retryT = null, backoff = 800;
-  let src = null, proc = null, sink = null;
-
-  function wsUrl(){
-    const l = langSel.value === 'multi' ? 'multi' : langSel.value.split('-')[0];
-    const p = new URLSearchParams({
-      model:'nova-3', language:l, encoding:'linear16', sample_rate:'16000', channels:'1',
-      interim_results:'true', punctuate:'true', smart_format:'true', numerals:'true',
-      endpointing:'350'
-    });
-    return 'wss://api.deepgram.com/v1/listen?' + p.toString();
-  }
-
-  function open(){
-    if (!alive) return;
-    try { ws = new WebSocket(wsUrl(), ['token', cfg.dgKey]); }
-    catch(e){ setStatus('chiave non valida','err'); return; }
-    ws.binaryType = 'arraybuffer';
-    ws.onopen = () => {
-      backoff = 800; lastActivity = Date.now(); setStatus('cloud listening','ok');
-      clearInterval(keepT);
-      keepT = setInterval(() => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'KeepAlive'})); }, 7000);
-    };
-    ws.onmessage = m => {
-      let d; try { d = JSON.parse(m.data); } catch(e){ return; }
-      if (d.type === 'Results'){
-        const alt = d.channel && d.channel.alternatives && d.channel.alternatives[0];
-        if (alt) consume(alt.transcript, !!d.is_final);
-      } else if (d.type === 'Metadata'){
-        lastActivity = Date.now();
-      }
-    };
-    ws.onerror = () => { setStatus('cloud error','err'); };
-    ws.onclose = e => {
-      clearInterval(keepT);
-      if (!alive) { setStatus('idle',''); return; }
-      if (e.code === 4001 || e.code === 4003 || e.code === 1008){
-        setStatus('key rejected','err');
-        document.getElementById('diag').textContent = 'DG ' + e.code + ' ' + (e.reason || '');
-        // ripiego sul motore gratuito invece di lasciarlo muto
-        switchTo('web', true);
-        return;
-      }
-      setStatus('reconnecting…','warn');
-      clearTimeout(retryT);
-      retryT = setTimeout(open, backoff);
-      backoff = Math.min(Math.round(backoff * 1.7), 8000);
-    };
-  }
-
-  async function pipe(){
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') { try { await audioCtx.resume(); } catch(e){} }
-    src  = audioCtx.createMediaStreamSource(micStream);
-    proc = audioCtx.createScriptProcessor(4096, 1, 1);
-    sink = audioCtx.createGain(); sink.gain.value = 0;   // niente ritorno in altoparlante
-    const ratio = audioCtx.sampleRate / 16000;
-    proc.onaudioprocess = ev => {
-      if (!ws || ws.readyState !== 1) return;
-      const inBuf = ev.inputBuffer.getChannelData(0);
-      const outLen = Math.floor(inBuf.length / ratio);
-      const out = new Int16Array(outLen);
-      for (let i = 0; i < outLen; i++){
-        const a = Math.floor(i * ratio), b = Math.min(inBuf.length, Math.floor((i + 1) * ratio));
-        let sum = 0, n = 0;
-        for (let j = a; j < b; j++){ sum += inBuf[j]; n++; }
-        let s = n ? sum / n : 0;
-        s = s < -1 ? -1 : s > 1 ? 1 : s;
-        out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-      }
-      ws.send(out.buffer);
-    };
-    src.connect(proc); proc.connect(sink); sink.connect(audioCtx.destination);
-  }
-
-  return {
-    name: 'cloud',
-    label: 'Cloud engine',
-    async start(){
-      alive = true;
-      if (!cfg.dgKey){ setStatus('no API key','err'); switchTo('web', true); return; }
-      setStatus('connecting…','warn');
-      try { await openMic(); }
-      catch(e){ setStatus('microphone blocked','err'); hintPermessi(); stopListening(); return; }
-      sawEngineEvent = true;
-      await pipe();
-      open();
-    },
-    stop(){
-      alive = false;
-      clearInterval(keepT); clearTimeout(retryT);
-      try { if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'CloseStream'})); } catch(e){}
-      try { ws && ws.close(); } catch(e){}
-      ws = null;
-      try { proc && (proc.onaudioprocess = null); } catch(e){}
-      [src, proc, sink].forEach(n => { try { n && n.disconnect(); } catch(e){} });
-      src = proc = sink = null;
-    },
-    kick(){ if (alive && (!ws || ws.readyState > 1)) open(); }
+  rec.onend = () => {
+    if (!listening) { statusEl.textContent = 'idle'; return; }
+    setTimeout(() => { if (listening) try{ rec.start(); }catch(e){ try{ start(); }catch(_){} } }, IOS ? 400 : 250);
   };
+  rec.onresult = ev => {
+    for (let i = ev.resultIndex; i < ev.results.length; i++){
+      const res = ev.results[i];
+      const txt = res[0].transcript.trim();
+      if (!txt) continue;
+      const {hits, marks} = detect(txt, langSel.value);
+      pushUtterance(txt, marks, !res.isFinal);
+      hits.forEach(h => addRider(h.rider, h.how));
+    }
+  };
+  rec.start();
 }
 
-/* ================= microfono condiviso + VU ================= */
-async function openMic(){
-  if (micStream && micStream.active) return micStream;
-  micStream = await navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:true }
-  });
-  return micStream;
-}
-function closeMic(){
-  if (micStream){ micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-  vuEl.style.width = '0%';
-}
-function startMeter(){
-  if (!cfg.meter || !micStream) return;
+async function startMeter(){
   try{
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const an = audioCtx.createAnalyser(); an.fftSize = 512;
-    audioCtx.createMediaStreamSource(micStream).connect(an);
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const an = ctx.createAnalyser(); an.fftSize = 512;
+    ctx.createMediaStreamSource(stream).connect(an);
     const buf = new Uint8Array(an.frequencyBinCount);
+    const vu = document.getElementById('vu');
     (function loop(){
-      if (!listening || !cfg.meter){ vuEl.style.width = '0%'; return; }
+      if (!listening) { vu.style.width = '0%'; stream.getTracks().forEach(t=>t.stop()); ctx.close(); return; }
       an.getByteTimeDomainData(buf);
-      let peak = 0; for (const v of buf) peak = Math.max(peak, Math.abs(v - 128));
-      vuEl.style.width = Math.min(100, Math.round(peak / 128 * 260)) + '%';
+      let peak = 0; for (const v of buf) peak = Math.max(peak, Math.abs(v-128));
+      vu.style.width = Math.min(100, Math.round(peak/128*260)) + '%';
       requestAnimationFrame(loop);
     })();
-  } catch(e){}
+  } catch(e){ statusEl.textContent = 'microphone denied'; }
 }
 
-/* ================= schermo sempre acceso ================= */
-async function acquireWake(){
-  if (!cfg.keepAwake) return;
-  if ('wakeLock' in navigator){
-    try { wakeLock = await navigator.wakeLock.request('screen'); return; } catch(e){}
-  }
-  playNoSleepVideo();      // ripiego per iPadOS vecchi
-}
-function releaseWake(){
-  try { wakeLock && wakeLock.release(); } catch(e){}
-  wakeLock = null;
-  const v = document.getElementById('nosleep');
-  try { v.pause(); } catch(e){}
-}
-function playNoSleepVideo(){
-  const v = document.getElementById('nosleep');
-  if (!v.src) v.src = NOSLEEP_MP4;
-  v.play().catch(()=>{});
-}
-/* audio muto che gira: tiene viva la sessione audio di iOS */
-let silentOsc = null;
-function startSilentKeepAlive(){
-  try{
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    if (silentOsc) return;
-    silentOsc = audioCtx.createOscillator();
-    const g = audioCtx.createGain(); g.gain.value = 0.0001;
-    silentOsc.frequency.value = 30;
-    silentOsc.connect(g); g.connect(audioCtx.destination);
-    silentOsc.start();
-  } catch(e){}
-}
-function stopSilentKeepAlive(){ try { silentOsc && silentOsc.stop(); } catch(e){} silentOsc = null; }
-
-/* ================= avvio / arresto =================
-   ATTENZIONE Safari/iPad: il riconoscimento vocale va fatto partire
-   DENTRO il gesto del dito. Basta un solo `await` prima di rec.start()
-   e iOS considera la chiamata non piu' voluta dall'utente: non chiede il
-   permesso, non parte, non dice niente. Quindi qui niente await prima
-   di engine.start(): il resto (wake lock, VU) viene dopo, in sottofondo. */
-let sawEngineEvent = false, noResponseT = null;
-
-function hintPermessi(){
-  if (document.getElementById('dictHint')) return;
-  document.getElementById('feedEmpty')?.remove();
-  const d = document.createElement('div');
-  d.id = 'dictHint'; d.className = 'empty';
-  d.innerHTML = 'Safari did not start the recogniser. Check, in this order:<br>' +
-    '1. <b>Settings → General → Keyboard → Enable Dictation</b> must be on.<br>' +
-    '2. <b>Settings → Apps → Safari → Microphone</b> set to <i>Ask</i> or <i>Allow</i>.<br>' +
-    '3. On the page: tap <b>\u1D00A</b> in the address bar → <b>Website Settings</b> → Microphone → <i>Allow</i>.<br>' +
-    'Then reload. You can also open \u2699 and use <b>Test microphone</b>.';
-  feedEl.appendChild(d);
-}
-
-function startListening(){
-  if (listening) return;
-  const want = chosenEngine();
-  if (want === 'web' && !SR){
-    setStatus('Web Speech unavailable','err');
-    if (!cfg.dgKey){ alert('This browser has no speech recognition. Use Safari, or add a Deepgram key under ⚙.'); return; }
-  }
-  listening = true;
-  sawEngineEvent = false;
-  document.getElementById('dictHint')?.remove();
-  micBtn.classList.add('on');
-  micLabel.textContent = 'Stop listening';
-  setStatus('starting…','warn');
-  startedAt = Date.now(); lastActivity = Date.now();
-  clearInterval(tickTimer);
-  tickTimer = setInterval(() => {
-    const s = Math.floor((Date.now() - startedAt) / 1000);
-    uptimeEl.textContent = String(Math.floor(s / 60)).padStart(2,'0') + ':' + String(s % 60).padStart(2,'0');
-  }, 1000);
-
-  engine = want === 'cloud' ? CloudEngine() : WebEngine();
-  engPill.textContent = engine.label;
-  engPill.className = 'engpill' + (engine.name === 'cloud' ? ' cloud' : '');
-
-  // --- dentro il gesto utente, senza await ---
-  startSilentKeepAlive();
-  try { engine.start(); } catch(e){ setStatus('error: ' + e.message, 'err'); }
-
-  // --- da qui in poi tutto quello che puo' aspettare ---
-  acquireWake();
-  if (want !== 'cloud' && cfg.meter){
-    openMic().then(startMeter).catch(() => setStatus('microphone blocked','err'));
-  }
-
-  clearTimeout(noResponseT);
-  noResponseT = setTimeout(() => {
-    if (listening && !sawEngineEvent){
-      setStatus('no response','err');
-      hintPermessi();
-    }
-  }, 4000);
-}
-
-function stopListening(){
-  listening = false;
-  clearInterval(tickTimer); clearTimeout(noResponseT);
-  micBtn.classList.remove('on');
-  micLabel.textContent = 'Start listening';
-  uptimeEl.textContent = '00:00';
-  try { engine && engine.stop(); } catch(e){}
-  engine = null;
-  stopSilentKeepAlive();
-  releaseWake();
-  closeMic();
-  setStatus('idle','');
-}
-
-/* cambio motore al volo, mantenendo l'ascolto */
-async function switchTo(name, silent){
-  cfg.engine = name; saveCfg();
-  document.getElementById('engine').value = name;
-  if (!listening) return;
-  try { engine && engine.stop(); } catch(e){}
-  engine = name === 'cloud' ? CloudEngine() : WebEngine();
-  engPill.textContent = engine.label;
-  engPill.className = 'engpill' + (engine.name === 'cloud' ? ' cloud' : '');
-  if (!silent) setStatus('switching engine…','warn');
-  try { if (name === 'cloud') await openMic(); } catch(e){}
-  await engine.start();
-}
-
-micBtn.onclick = () => { listening ? stopListening() : startListening(); };
-langSel.onchange = () => { if (listening) switchTo(chosenEngine(), true); };
-
-/* rientro nella app: riprendo wake lock e do una spinta al motore */
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible') return;
-  if (!listening) return;
-  acquireWake();
-  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-  if (cfg.autoResume && engine && engine.kick) engine.kick();
-});
-window.addEventListener('pageshow', () => { if (listening) acquireWake(); });
-
-/* ---------- pannello impostazioni ---------- */
-const settingsSheet = document.getElementById('settings');
-const engineSel = document.getElementById('engine');
-const dgKeyIn   = document.getElementById('dgKey');
-const optWake   = document.getElementById('optWake');
-const optMeter  = document.getElementById('optMeter');
-const optAuto   = document.getElementById('optAuto');
-
-function fillSettings(){
-  engineSel.value = cfg.engine;
-  dgKeyIn.value   = cfg.dgKey || '';
-  optWake.checked = !!cfg.keepAwake;
-  optMeter.checked= !!cfg.meter;
-  optAuto.checked = !!cfg.autoResume;
-  document.getElementById('diag').textContent =
-    (SR ? 'SpeechRecognition ok' : 'no SpeechRecognition') +
-    (('wakeLock' in navigator) ? ' · wakeLock ok' : ' · no wakeLock');
-}
-document.getElementById('openSettings').onclick = () => { fillSettings(); settingsSheet.classList.add('open'); };
-document.getElementById('closeSettings').onclick = () => settingsSheet.classList.remove('open');
-settingsSheet.addEventListener('click', e => { if (e.target === settingsSheet) settingsSheet.classList.remove('open'); });
-document.getElementById('testMic').onclick = async () => {
-  const out = document.getElementById('testOut');
-  out.textContent = 'asking for permission…';
-  try{
-    const s = await navigator.mediaDevices.getUserMedia({audio:true});
-    const t = s.getAudioTracks()[0];
-    out.textContent = 'microphone ok — ' + (t ? t.label || 'input live' : 'ok');
-    s.getTracks().forEach(x => x.stop());
-  } catch(e){
-    out.textContent = 'blocked: ' + (e.name || e.message);
-  }
+micBtn.onclick = () => {
+  if (listening){ listening = false; rec && rec.stop(); micBtn.classList.remove('on'); micLabel.textContent = 'Start listening'; }
+  else { listening = true; micBtn.classList.add('on'); micLabel.textContent = 'Stop listening'; startMeter(); try{ start(); }catch(e){ statusEl.textContent = 'start error: '+e.message; } }
 };
+langSel.onchange = () => { if (listening){ rec && rec.stop(); } };
 
-document.getElementById('saveSettings').onclick = () => {
-  const prev = chosenEngine();
-  cfg.engine     = engineSel.value;
-  cfg.dgKey      = dgKeyIn.value.trim();
-  cfg.keepAwake  = optWake.checked;
-  cfg.meter      = optMeter.checked;
-  cfg.autoResume = optAuto.checked;
-  saveCfg();
-  settingsSheet.classList.remove('open');
-  if (listening && chosenEngine() !== prev) switchTo(chosenEngine(), true);
-  else if (listening){ cfg.keepAwake ? acquireWake() : releaseWake(); }
-};
-
-/* mp4 minimo di un pixel nero, usato solo come anti-standby di ripiego */
-const NOSLEEP_MP4 = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMsbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAB9AAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAlZ0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAB9AAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAEAAAABAAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAfQAAAAAAABAAAAAAHObWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAABAAAAAgABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABeW1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAATlzdGJsAAAAuXN0c2QAAAAAAAAAAQAAAKlhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAEAAQABIAAAASAAAAAAAAAABFUxhdmM2MC4zMS4xMDIgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAAL2F2Y0MBQsAe/+EAF2dCwB7ZBCbARAAAAwAEAAADAAg8WLkgAQAFaMuDyyAAAAAQcGFzcAAAAAEAAAABAAAAFGJ0cnQAAAAAAAAKcAAACnAAAAAYc3R0cwAAAAAAAAABAAAAAgAAQAAAAAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAgAAAAEAAAAcc3RzegAAAAAAAAAAAAAAAgAAApIAAAAKAAAAFHN0Y28AAAAAAAAAAQAAA1wAAABidWR0YQAAAFptZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAAC1pbHN0AAAAJal0b28AAAAdZGF0YQAAAAEAAAAATGF2ZjYwLjE2LjEwMAAAAAhmcmVlAAACpG1kYXQAAAJwBgX//2zcRem95tlIt5Ys2CDZI+7veDI2NCAtIGNvcmUgMTY0IHIzMTA4IDMxZTE5ZjkgLSBILjI2NC9NUEVHLTQgQVZDIGNvZGVjIC0gQ29weWxlZnQgMjAwMy0yMDIzIC0gaHR0cDovL3d3dy52aWRlb2xhbi5vcmcveDI2NC5odG1sIC0gb3B0aW9uczogY2FiYWM9MCByZWY9MyBkZWJsb2NrPTE6MDowIGFuYWx5c2U9MHgxOjB4MTExIG1lPWhleCBzdWJtZT03IHBzeT0xIHBzeV9yZD0xLjAwOjAuMDAgbWl4ZWRfcmVmPTEgbWVfcmFuZ2U9MTYgY2hyb21hX21lPTEgdHJlbGxpcz0xIDh4OGRjdD0wIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0PS0yIHRocmVhZHM9MiBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTAgd2VpZ2h0cD0wIGtleWludD0yNTAga2V5aW50X21pbj0xIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAGmWIhAW///8PRQABT38nJyddddddddddddeAAAAABkGaOAr4Rg==';
-
-fillSettings();
-setStatus('idle','');
-engPill.textContent = (chosenEngine() === 'cloud' ? 'Cloud' : 'Safari') + ' engine';
-
-/* ================================================================
-   READING THE GAPS OUT OF THE RADIO
-   "two riders twenty seconds on the bunch, five chasers at ten"
-   -> HEAD 0:00 (2)   CHASERS +0:10 (5)   PELOTON +0:20
-   ================================================================ */
-const normP = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
-                    .replace(/[,;.]/g,' , ').replace(/[^a-z0-9\s,:]/g,' ').replace(/\s+/g,' ');
-
-// "un minuto", "une minute", "a minute": l'articolo vale 1 senza passare dal
-// dizionario dei numeri, cosi' non trasformo ogni "un" in un possibile dorsale
-const ONE = '(?:(\\d{1,3})|un|una|uno|une|a|one)';
-const MINW = '(?:minutos?|minuti|minutes?|min)';
-const SECW = '(?:segundos?|secondi|secondes?|seconds?|segs?|sec)';
-const one = m => m == null || m === '' ? 1 : +m;
-
-const GAP_PATTERNS = [
-  { re:new RegExp('\\b'+ONE+'\\s*'+MINW+'\\s*(?:y|e|et|and)?\\s*(?:medio|mezzo|demi|half)\\b'),
-    f:m => one(m[1])*60 + 30 },
-  { re:new RegExp('\\b'+ONE+'\\s*'+MINW+'\\s*(?:y|e|et|and)?\\s*(\\d{1,2})\\s*'+SECW+'?\\b(?!\\s*'+MINW+')'),
-    f:m => one(m[1])*60 + (+m[2] || 0) },
-  { re:new RegExp('\\b'+ONE+'\\s*'+MINW+'\\b'), f:m => one(m[1])*60 },
-  { re:/\b(\d{1,2}):(\d{2})\b/, f:m => +m[1]*60 + +m[2] },
-  { re:new RegExp('\\b(\\d{1,3})\\s*'+SECW+'\\b'), f:m => +m[1] }
-];
-// "el pelotón a veinte": senza unità, ma con un gruppo nominato, "a N" è un distacco
-const BARE_GAP = /\b(?:a|at|de|di)\s+(\d{1,3})\b/;
-
-const KIND_WORDS = [
-  { re:/\b(cabeza|escapada|escapados|fugados?|fuga|testa|tete|echappee|breakaway|break|leaders?|front|primi|punta)\b/, kind:'head' },
-  { re:/\b(contraatacantes?|contraataques?|contras|perseguidores?|persecucion|contrattacco|contrattaccanti|attaccanti|inseguitori|chasers?|chasing|chase|contre|poursuivants?|counterattack(?:ers)?|counter)\b/, kind:'chase' },
-  { re:/\b(peloton|pelotone|gruppo|grupo|plotone|bunch|main group|principal|principale)\b/, kind:'bunch' },
-  { re:/\b(gruppetto|gruppeto|grupetto|autobus|laggards?|back group|coda)\b/, kind:'tail' }
-];
-const KIND_LABEL = { head:'Breakaway', chase:'Chasers', bunch:'Peloton', tail:'Gruppetto' };
-const RIDERW = '(?:corredores?|ciclistas?|corridori|coureurs?|riders?|hombres|uomini|unidades|contraatacantes?|contrattaccanti|perseguidores?|inseguitori|chasers?|poursuivants?|fugados?|escapados?|counterattackers?)';
-// quante persone sono. Ogni schema dice anche cosa togliere dalla frase:
-//  all    tutto (il numero non serve piu')
-//  digits solo le cifre, la parola serve per capire il tipo di gruppo
-//  lead   solo il numero iniziale, il resto e' il distacco da leggere dopo
-const COUNT_PATTERNS = [
-  { re: new RegExp('\\b(?:grupo|gruppo|groupe|group)\\s+(?:de|di|of)\\s+(\\d{1,2})\\b'), strip:'all' },
-  { re: new RegExp('\\b(\\d{1,2})\\s*'+RIDERW+'\\b'), strip:'digits' },
-  { re: /\b(?:altri|altre|altro|otros|otras|otro|another|other|more|encore|autres|ancora)\s+(\d{1,2})\b/, strip:'all' },
-  { re: /\b(\d{1,2})\s+(?:a|at|con|with|de|di|dietro|behind)\s+\d{1,3}\s*sec\b/, strip:'lead' }
-];
-const ADV_RE    = /\b(ventaja|vantaggio|advantage|lead|leading)\b/;
-
-/* Da dove è misurato il distacco. "cinque a quindici dai primi" e
-   "cinque a quindici dal gruppo" mettono lo stesso gruppo in due punti
-   opposti della strada, quindi il riferimento va letto esplicitamente. */
-const PREP = '(?:de|del|della|dello|dei|dai|dal|dalla|du|des|from|on|sobre|sul|sullo|sulla|sui|su|sur|rispetto a[l]?)';
-const REF_PATTERNS = [
-  ['prev',  new RegExp('\\b'+PREP+'\\s+(?:el|il|la|le|the|los)?\\s*(?:grupo|gruppo|groupe|group)?\\s*(?:anterior|precedente|davanti|delante|delantero|ahead|in front|previous)\\b')],
-  ['head',  new RegExp('\\b'+PREP+'\\s+(?:los|i|the|la|le)?\\s*(?:primeros?|primi|prima|cabeza|testa|tete|leaders?|front|head|fuga|escapada|escapados|fugados)\\b')],
-  ['bunch', new RegExp('\\b'+PREP+'\\s+(?:el|il|le|la|the)?\\s*(?:peloton|pelotone|grupo|gruppo|plotone|bunch|main group)\\b')]
-];
-
-// I minuti li riduco a secondi PRIMA di spezzare la frase, altrimenti
-// "un minuto e trenta" si spacca in due sulla congiunzione e diventa 60.
-function foldTimes(text){
-  let t = ' ' + text + ' ';
-  t = t.replace(new RegExp(ONE+'\\s*'+MINW+'\\s*(?:y|e|et|and)\\s*(?:medio|mezzo|demi|half)\\b','g'),
-                (m,a) => ' ' + (one(a)*60 + 30) + ' sec ');
-  t = t.replace(new RegExp(ONE+'\\s*'+MINW+'\\s*(?:y|e|et|and)?\\s*(\\d{1,2})\\s*'+SECW+'?(?!\\d)','g'),
-                (m,a,b) => ' ' + (one(a)*60 + (+b||0)) + ' sec ');
-  t = t.replace(new RegExp(ONE+'\\s*'+MINW,'g'), (m,a) => ' ' + (one(a)*60) + ' sec ');
-  t = t.replace(/\b(\d{1,2}):(\d{2})\b/g, (m,a,b) => ' ' + (+a*60 + +b) + ' sec ');
-  return t.replace(/\s+/g,' ').trim();
-}
-
-function readSegment(seg, lang){
-  const out = { gap:null, count:null, kind:null, ref:null, riders:[] };
-  let s = ' ' + seg + ' ';
-  for (const p of COUNT_PATTERNS){
-    const m = p.re.exec(s);
-    if (!m) continue;
-    out.count = +m[1];
-    s = s.replace(m[0],
-      p.strip === 'all'    ? ' ' :
-      p.strip === 'digits' ? ' ' + m[0].replace(/\d+/g,'') + ' ' :
-                             ' ' + m[0].replace(/^\s*\d+\s*/,'') + ' ');
-    break;
-  }
-  // il riferimento va letto e tolto PRIMA del tipo di gruppo, altrimenti
-  // "a quindici secondi dalla fuga" verrebbe scambiato per la fuga stessa
-  for (const [name, re] of REF_PATTERNS){
-    const m = re.exec(s);
-    if (m){ out.ref = name; s = s.replace(m[0], ' '); break; }
-  }
-  if (!out.ref && ADV_RE.test(s)) out.ref = 'bunch';
-  for (const k of KIND_WORDS) if (k.re.test(s)){ out.kind = k.kind; break; }
-  for (const p of GAP_PATTERNS){
-    const m = p.re.exec(s);
-    if (m){ out.gap = p.f(m); s = s.replace(m[0], ' '); break; }
-  }
-  // "il gruppo a venti" senza unità: lo accetto solo se quel numero non è un
-  // dorsale della start list, altrimenti "il gruppo con il ventuno" diventa
-  // un distacco di 21 secondi inventato dal nulla
-  if (out.gap == null && out.kind){
-    const m = BARE_GAP.exec(s);
-    if (m && +m[1] <= 600 && !byBib.has(+m[1])){ out.gap = +m[1]; s = s.replace(m[0], ' '); }
-  }
-  // lo stesso corridore può arrivare due volte (dal numero e dal cognome)
-  const seen = new Map();
-  detect(s, lang).hits.forEach(h => { if (!seen.has(h.rider.bib)) seen.set(h.rider.bib, h.rider); });
-  out.riders = [...seen.values()];
-  out.text = seg;
-  return out;
-}
-
-function ensureHead(){
-  let h = groups.find(g => g.gap === 0);
-  if (!h) h = makeGroup(0, 'Breakaway', 'head');
-  return h;
-}
-function kindFromGap(gap){ return gap === 0 ? 'head' : 'chase'; }
-
-// trova o crea il gruppo che sta a `abs` secondi dalla testa della corsa
-function resolveAt(abs, kind, src){
-  abs = Math.max(0, Math.round(abs));
-  let g = groupByGap(abs);
-  // fuga, gruppo e gruppetto sono unici; di contrattacchi ce ne possono essere tanti
-  if (!g && kind && kind !== 'chase') g = groups.find(x => x.kind === kind);
-  if (!g) g = makeGroup(abs, KIND_LABEL[kind] || 'Group', kind || kindFromGap(abs));
-  g.gap = abs; g.t = Date.now();
-  if (src) g.src = src;
-  if (kind){ g.kind = kind; g.label = KIND_LABEL[kind]; }
-  return g;
-}
-
-let lastRefGroup = null;   // ultimo gruppo nominato, anche in frasi precedenti
-
-function applySituation(raw, lang){
-  const text = foldTimes(wordsToDigits(normP(raw), lang));
-  const segs = text.split(/\s*,\s*|\s+(?:y|e|et|and|mientras|mentre|while)\s+/)
-                   .map(s => s.trim()).filter(Boolean);
-  let last = null, touched = false, pending = [], firstGroup = null;
-  snapshot();
-
-  for (const seg of segs){
-    const info = readSegment(seg, lang);
-    // interruttore ⏱ gaps: quando e' spento la radio puo' solo assegnare
-    // corridori ai gruppi, mai creare o spostare un distacco
-    if (!cfg.radioGaps){ info.gap = null; info.ref = null; }
-    if (info.gap == null && !info.kind && !info.riders.length) continue;
-
-    // un gruppo "di testa" non puo' stare dietro: se sento testa + distacco
-    // senza altro riferimento, quel tempo e' il vantaggio sul gruppo
-    if (info.kind === 'head' && info.gap > 0 && !info.ref) info.ref = 'bunch';
-
-    let g = null;
-    if (info.gap != null){
-      if (info.ref === 'bunch'){
-        // distacco misurato dal gruppo: chi e' nominato sta DAVANTI di tanto
-        const bunch = groups.find(x => x.kind === 'bunch');
-        if (bunch && bunch.gap != null){
-          g = resolveAt(bunch.gap - info.gap, info.kind === 'bunch' ? null : info.kind, info.text);
-        } else {
-          const b = bunch || makeGroup(info.gap, 'Peloton', 'bunch');
-          b.gap = info.gap; b.kind = 'bunch'; b.label = 'Peloton'; b.t = Date.now(); b.src = info.text;
-          g = (info.kind && info.kind !== 'head' && info.kind !== 'bunch')
-                ? resolveAt(0, info.kind, info.text) : ensureHead();
-        }
-      } else if (info.ref === 'prev'){
-        // "a dieci dal gruppo precedente": si somma a quello nominato prima,
-        // anche se era nella frase precedente
-        const ref = (last && last.gap != null) ? last : lastRefGroup;
-        const base = ref && ref.gap != null ? ref.gap : 0;
-        g = resolveAt(base + info.gap, info.kind, info.text);
-        ensureHead();
-      } else {
-        // riferimento implicito o esplicito ai primi
-        g = resolveAt(info.gap, info.kind, info.text);
-        if (info.gap > 0) ensureHead();
-      }
-    } else if (info.kind){
-      g = groups.find(x => x.kind === info.kind);
-      if (!g) g = makeGroup(info.kind === 'head' ? 0 : null, KIND_LABEL[info.kind], info.kind);
-      g.t = Date.now();
-    } else {
-      g = last;
-    }
-
-    if (info.count && g) g.count = info.count;
-
-    if (g){
-      // i corridori nominati prima che il gruppo fosse chiaro finiscono qui
-      pending.splice(0).forEach(r => place(r.bib, g));
-      info.riders.forEach(r => { heardHow.set(r.bib,'radio'); place(r.bib, g); });
-      last = g; firstGroup = firstGroup || g;
-    } else {
-      info.riders.forEach(r => { heardHow.set(r.bib,'radio'); pending.push(r); });
-    }
-    touched = true;
-  }
-  // nomi rimasti senza gruppo: se nella frase un gruppo c'era, vanno lì
-  pending.forEach(r => { heardHow.set(r.bib,'radio'); place(r.bib, firstGroup || null); });
-  if (last) lastRefGroup = last;
-  if (!touched) history.pop();
-  if (touched) render();
-}
-
-/* ================= interazioni sulla board ================= */
-const menu = document.getElementById('menu');
-const menuBox = document.getElementById('menubox');
-function closeMenu(){ menu.classList.remove('open'); }
-menu.addEventListener('click', e => { if (e.target === menu) closeMenu(); });
-
-function openMenu(title, sub, html){
-  menuBox.innerHTML = `<h3>${title}</h3><div class="sub">${sub || ''}</div>${html}
-    <button class="mopt" data-x="close" style="text-align:center;margin-top:6px">Close</button>`;
-  menu.classList.add('open');
-}
-
-function groupOptions(exceptId){
-  return groups.map(g => `<button class="mopt" data-move="${g.id}">${g.label}
-      <small>${fmtGap(g.gap)} · ${g.riders.length} identified</small></button>`).join('')
-    + `<button class="mopt" data-move="new">New group…<small>set the gap yourself</small></button>`
-    + `<button class="mopt" data-move="loose">Unplaced<small>back to the tray</small></button>`;
-}
-
-function riderMenu(bib){
-  const r = byBib.get(bib); if (!r) return;
-  openMenu(r.last + ' ' + r.first,
-    '#' + r.bib + ' · ' + r.teamName + (r.gcPos ? ' · GC ' + r.gcPos + ' ' + (r.gcGap||'') : '') +
-    (r.status ? ' · ' + r.status : ''),
-    `<button class="mopt" data-pcs="${r.slug}">Open on ProCyclingStats ↗</button>
-     <div class="sub" style="margin:12px 0 6px">Move to</div>${groupOptions()}
-     <button class="mopt danger" data-drop="${r.bib}">Remove from the board</button>`);
-  menuBox.dataset.bib = bib;
-}
-
-function gapMenu(gid2){
-  const g = groupById(gid2); if (!g) return;
-  const cur = g.gap == null ? 0 : g.gap;
-  openMenu('Gap for ' + g.label, 'Time behind the head of the race.',
-    (g.src ? `<div class="srcline">set from what it heard:<br>“${g.src}”</div>` : '') +
-    `<div class="gapedit">
-       <input id="gm" type="number" min="0" max="59" value="${Math.floor(cur/60)}" inputmode="numeric"> :
-       <input id="gs" type="number" min="0" max="59" value="${cur%60}" inputmode="numeric">
-       <button class="mopt" style="margin:0 0 0 8px;width:auto" data-setgap="1">Set</button>
-     </div>
-     <div class="quick">
-       ${[0,5,10,15,20,30,45,60,90,120,180,300].map(v=>`<button data-quick="${v}">${fmtGap(v)}</button>`).join('')}
-     </div>
-     <div class="sub">Label</div>
-     ${Object.keys(KIND_LABEL).map(k=>`<button class="mopt" data-kind="${k}">${KIND_LABEL[k]}</button>`).join('')}`);
-  menuBox.dataset.gid = gid2;
-}
-
-menu.addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  const bib = +menuBox.dataset.bib, gidv = +menuBox.dataset.gid;
-  if (b.dataset.x === 'close') return closeMenu();
-  if (b.dataset.pcs){ window.open(pcsUrl({slug:b.dataset.pcs}), '_blank'); return closeMenu(); }
-  if (b.dataset.drop){ snapshot(); detach(+b.dataset.drop); render(); return closeMenu(); }
-  if (b.dataset.move){
-    snapshot();
-    const v = b.dataset.move;
-    if (v === 'loose') place(bib, null);
-    else if (v === 'new'){ const g = makeGroup(null, 'Group', 'chase'); place(bib, g); render(); closeMenu(); return gapMenu(g.id); }
-    else place(bib, groupById(v));
-    render(); return closeMenu();
-  }
-  if (b.dataset.quick != null){ snapshot(); const g = groupById(gidv); if (g){ g.gap = +b.dataset.quick; g.t = Date.now(); g.src = null; } render(); return closeMenu(); }
-  if (b.dataset.setgap){
-    snapshot();
-    const g = groupById(gidv);
-    if (g){ g.gap = Math.max(0, (+document.getElementById('gm').value||0)*60 + (+document.getElementById('gs').value||0)); g.t = Date.now(); g.src = null; }
-    render(); return closeMenu();
-  }
-  if (b.dataset.kind){
-    snapshot();
-    const g = groupById(gidv);
-    if (g){ g.kind = b.dataset.kind; g.label = KIND_LABEL[b.dataset.kind]; }
-    render(); return closeMenu();
-  }
+/* ---------- interazioni ---------- */
+cardsEl.addEventListener('click', e => {
+  const card = e.target.closest('.card');
+  if (card) window.open('https://www.procyclingstats.com/rider/' + card.dataset.slug, '_blank');
 });
-
-boardEl.addEventListener('click', e => {
-  const chip = e.target.closest('.rtile');
-  if (chip) return riderMenu(+chip.dataset.bib);
-  const act = e.target.closest('[data-act]');
-  if (!act) return;
-  const sec = act.closest('.grp');
-  const g = sec ? groupById(sec.dataset.g) : null;
-  if (act.dataset.act === 'gap' || act.dataset.act === 'label') return gapMenu(g.id);
-  if (act.dataset.act === 'del'){
-    if (!g) return;
-    snapshot();
-    g.riders.forEach(b => { if (!loose.includes(b)) loose.unshift(b); });
-    groups = groups.filter(x => x.id !== g.id);
-    return render();
-  }
-  if (act.dataset.act === 'add'){
-    rosterTarget = g ? g.id : null;
-    document.getElementById('roster').classList.add('open');
-    document.getElementById('search').focus();
-    document.getElementById('rosterHint').textContent = g ? 'adding to ' + g.label + ' ' + fmtGap(g.gap) : '';
-  }
-});
-
-document.getElementById('addGroup').onclick = () => { snapshot(); const g = makeGroup(null,'Group','chase'); render(); gapMenu(g.id); };
-document.getElementById('wipe').onclick = () => { snapshot(); clearBoard(); render(); };
-document.getElementById('undoBtn').onclick = undo;
-
-const gapsBtn = document.getElementById('gapsToggle');
-function paintGapsBtn(){
-  gapsBtn.className = 'ghost tgl ' + (cfg.radioGaps ? 'on' : 'off');
-  gapsBtn.title = cfg.radioGaps
-    ? 'The radio can set the gaps — tap to lock them'
-    : 'Gaps locked: the radio only files riders into groups';
-}
-gapsBtn.onclick = () => { cfg.radioGaps = !cfg.radioGaps; saveCfg(); paintGapsBtn(); };
-paintGapsBtn();
 
 document.getElementById('manual').addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   const r = byBib.get(parseInt(e.target.value,10));
-  if (r) { addRider(r, 'manual', null); e.target.value = ''; }
+  if (r) { addRider(r, 'manual'); e.target.value = ''; }
   else { e.target.value = ''; e.target.placeholder = 'Bib not in start list'; setTimeout(()=> e.target.placeholder='Bib by hand — press enter to add', 1600); }
 });
 
-document.getElementById('clear').onclick = () => { snapshot(); clearBoard(); render(); };
+document.getElementById('clear').onclick = () => { called.length = 0; render(); };
 
 const rosterEl = document.getElementById('roster');
-let rosterTarget = null;   // id del gruppo a cui aggiungere, se aperto da "+ rider"
-document.getElementById('toggleRoster').onclick = () => {
-  rosterTarget = null;
-  document.getElementById('rosterHint').textContent = '';
-  rosterEl.classList.toggle('open');
-};
+document.getElementById('toggleRoster').onclick = () => rosterEl.classList.toggle('open');
 
 function renderRoster(q=''){
   const s = norm(q).trim();
@@ -3697,8 +2672,7 @@ renderRoster();
 document.getElementById('search').addEventListener('input', e => renderRoster(e.target.value));
 document.getElementById('rosterList').addEventListener('click', e => {
   const row = e.target.closest('.rrow');
-  if (!row) return;
-  addRider(byBib.get(parseInt(row.dataset.bib,10)), 'list', rosterTarget ? groupById(rosterTarget) : null);
+  if (row) addRider(byBib.get(parseInt(row.dataset.bib,10)), 'list');
 });
 
 /* ================= importazione comunicati ================= */
@@ -3873,7 +2847,7 @@ function applyData(d){
   buildIndexes();
   document.getElementById('race').textContent = DATA.race || '';
   document.getElementById('stage').textContent = DATA.stage || '';
-  clearBoard(); render(); renderRoster(document.getElementById('search').value || '');
+  called.length = 0; render(); renderRoster(document.getElementById('search').value || '');
 }
 
 /* ---------- interfaccia ---------- */
@@ -3938,59 +2912,8 @@ const drop = document.getElementById('drop');
 ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('hot'); }));
 drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) ingest(f); });
 
-render();
-
 const saved = load();
 if (saved && saved.riders && saved.riders.length) applyData(saved);
-
-/* ---------- pdf.js: worker locale al CDN, così il service worker può cacharlo ---------- */
-try{ if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }catch(e){}
-
-/* ---------- service worker: offline + aggiornamento automatico ----------
-   Non serve toccare niente per pubblicare una versione nuova: la app
-   controlla da sola se sul sito c'e' un index.html piu' recente e si
-   aggiorna al lancio successivo. Se sta ascoltando non si ricarica di
-   colpo: aspetta e lo dice con una pastiglia in basso a destra.        */
-function showUpdateBadge(worker){
-  let b = document.getElementById('updBadge');
-  if (!b){
-    b = document.createElement('button');
-    b.id = 'updBadge';
-    b.className = 'engpill cloud';
-    b.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:80;padding:10px 14px;cursor:pointer';
-    b.textContent = 'new version — tap to update';
-    document.body.appendChild(b);
-  }
-  b.onclick = () => { try { worker && worker.postMessage('skipWaiting'); } catch(e){} location.reload(); };
-}
-
-if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
-  window.addEventListener('load', async () => {
-    try{
-      const reg = await navigator.serviceWorker.register('sw.js', {updateViaCache:'none'});
-      setInterval(() => reg.update().catch(()=>{}), 60*60*1000);
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') reg.update().catch(()=>{});
-      });
-      let reloading = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (reloading || listening) return;
-        reloading = true; location.reload();
-      });
-      reg.addEventListener('updatefound', () => {
-        const nw = reg.installing;
-        if (!nw) return;
-        nw.addEventListener('statechange', () => {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller){
-            if (listening) showUpdateBadge(nw);      // non ti tolgo l'ascolto da sotto i piedi
-            else nw.postMessage('skipWaiting');
-          }
-        });
-      });
-    } catch(e){}
-  });
-}
 
 </script>
 </body>
