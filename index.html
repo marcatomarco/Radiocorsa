@@ -237,7 +237,7 @@
         </select>
       </div>
       <div class="row">
-        <input id="manual" inputmode="numeric" placeholder="Phrase, or command: front 11 12 13 · g2 21 22 +30 · peloton +55">
+        <input id="manual" inputmode="numeric" placeholder="Phrase, or command: front 11 12 13 · peloton +55 · tt 51 24 15">
       </div>
       <div class="row">
         <select id="device" style="flex:1"><option value="">default microphone</option></select>
@@ -291,6 +291,7 @@
       <button class="tab" data-tab="points">Points</button>
       <button class="tab" data-tab="kom">KOM</button>
       <button class="tab" data-tab="youth">Youth</button>
+      <button class="tab" data-tab="tt">TT</button>
       <button class="tab" data-tab="learn">Learn</button>
       <button class="tab" data-tab="roster">Start list</button>
     </div>
@@ -311,6 +312,7 @@
       <section class="panel" id="p-kom"><div class="tablewrap" id="t-kom"></div></section>
       <section class="panel" id="p-youth"><div class="tablewrap" id="t-youth"></div></section>
 
+      <section class="panel" id="p-tt"></section>
       <section class="panel" id="p-learn"></section>
 
       <section class="panel" id="p-roster">
@@ -2585,9 +2587,10 @@ function wordsToDigits(text, lang){
     if (open && JOIN.has(tok)) continue;
     const v = decompose(tok, dict);
     if (v !== null){
-      // "undici dodici tredici" sono tre numeri, "cento cinquanta cinque" uno solo:
-      // si sommano solo valori di grandezza calante
-      if (open && (v >= last || v >= 100)){ out.push(String(acc)); acc = 0; }
+      // "cento cinquanta cinque" e "treinta y cuatro" si sommano;
+      // "undici dodici tredici" e "ventiquattro e quindici" no.
+      const merges = (last >= 100 && v < 100) || (last < 100 && last % 10 === 0 && v < 10);
+      if (open && !merges){ out.push(String(acc)); acc = 0; }
       acc += v; last = v; open = true; continue;
     }
     if (open){ out.push(String(acc)); acc = 0; last = Infinity; open = false; }
@@ -2897,6 +2900,24 @@ function tryCommand(raw){
     race.groups = []; race.pelotonGap = null; race.note = '';
     renderSituation(); renderRoad(); renderAllTables(); return true;
   }
+  const ttm = s.match(/^tt\s+(.*)$/);
+  if (ttm){
+    const body = ttm[1].trim();
+    if (/^reset$/.test(body)){ tt.inter.clear(); tt.finish.clear(); tt.note = ''; renderTT(); return true; }
+    const kmm = body.match(/^km\s+([\d.,]+)$/);
+    if (kmm){ tt.interKm = kmm[1]; renderTT(); return true; }
+    const isInter = /^(inter|intermedio)\b/.test(body);
+    const nums = (body.replace(/^(inter|intermedio)\s+/, '').match(/\d+/g) || []).map(Number);
+    if (nums.length >= 2 && byBib.has(nums[0])){
+      const sec = nums.length >= 4 ? nums[1]*3600 + nums[2]*60 + nums[3]
+                : nums.length === 3 ? nums[1]*60 + nums[2]
+                : nums[1];
+      (isInter ? tt.inter : tt.finish).set(nums[0], sec);
+      tt.note = 'set by hand'; renderTT(); return true;
+    }
+    return false;
+  }
+
   const m = s.match(/^(front|testa|g(\d)|gruppo|peloton|plotone)\s*(.*)$/);
   if (!m) return false;
   const rest = m[3] || '';
@@ -3171,7 +3192,7 @@ function applyData(d){
   buildIndexes();
   document.getElementById('race').textContent = DATA.race || '';
   document.getElementById('stage').textContent = DATA.stage || '';
-  called.length = 0; render(); renderSituation(); renderRoad(); renderAllTables(); renderRoster(document.getElementById('search').value || '');
+  called.length = 0; render(); renderSituation(); renderRoad(); renderAllTables(); renderTT(); renderRoster(document.getElementById('search').value || '');
 }
 
 /* ---------- interfaccia ---------- */
@@ -3279,6 +3300,7 @@ function tidy(){
 
 
 function updateRace(rawText, hits, lang){
+  if (typeof updateTT === 'function' && updateTT(rawText, hits, lang)) return;
   const {masked, times, count} = detect(rawText, lang || langSel.value);
   const t = masked;
   const bibs = [...new Set(hits.map(h => h.rider.bib))];
@@ -3333,8 +3355,13 @@ function updateRace(rawText, hits, lang){
       race.note = gap === 0 ? 'attack off the front' : 'counter-attack';
     }
     touched = true;
+  } else if ((bibs.length || count) && tHead){
+    // "altri tre a 30 secondi dai primi": nessun verbo, ma il riferimento basta
+    bibs.forEach(dropEverywhere);
+    race.groups.push({riders: new Set(bibs), gap: tHead.sec, size: Math.max(count, bibs.length)});
+    race.note = 'counter-attack'; touched = true;
   } else if (bibs.length && race.groups.length === 0 && times.length){
-    race.groups.push({riders: new Set(bibs), gap: 0});
+    race.groups.push({riders: new Set(bibs), gap: 0, size: bibs.length});
     race.pelotonGap = times[0].sec; touched = true;
   }
 
@@ -3562,8 +3589,127 @@ function renderLearn(){
   });
 }
 
+/* ================= cronometro =================
+   Ordine di partenza dal comunicato o a mano; tempi intermedi e finali
+   dettati dallo speaker; classifica di tappa e generale virtuale. */
+const tt = { interKm: null, inter: new Map(), finish: new Map(), note: '' };
+
+const RE_TT_INTER = /\b(?:intermedi|intermedio|intermediate|intermediaire|paso|passaggio|rilevamento|split)/;
+const RE_TT_FIN   = /\b(?:arriv|traguardo|meta|finish|final|conclude|chiude|ferma il tempo|tempo finale)/;
+
+/* Nel cronometro il tempo va letto PRIMA del dorsale, altrimenti il dorsale
+   se lo mangia: "il 51 chiude in 24 e 15" -> tempo 24'15", corridore 51. */
+const TT_TIME_PATS = [
+  /\b(\d{1,2})\s*[:'’]\s*(\d{1,2})\s*[:"”]\s*(\d{1,2})\b/,          // 1:05:30
+  /\b(\d{1,2})\s*[:'’]\s*(\d{1,2})\b/,                                // 24'15
+  /\b(\d{1,2})\s+(?:e|y|et|and)\s+(\d{1,2})\b/,                        // 24 e 15
+  /\b(\d{1,2})\s+(\d{1,2})\s+(\d{1,2})\b/,                            // 1 05 30
+  /\b(\d{1,2})\s+(\d{1,2})\b/,                                          // 24 15
+];
+
+function readTTTime(t){
+  for (const rx of TT_TIME_PATS){
+    const m = t.match(rx);
+    if (!m) continue;
+    const a = +m[1], b = +m[2], c = m[3] !== undefined ? +m[3] : null;
+    if (c !== null){ if (b > 59 || c > 59) continue; return {sec: a*3600 + b*60 + c, at: m.index, len: m[0].length}; }
+    if (b > 59) continue;
+    return {sec: a*60 + b, at: m.index, len: m[0].length};
+  }
+  return null;
+}
+
+function updateTT(rawText, hits, lang){
+  const t = wordsToDigits(norm(rawText), lang || langSel.value);
+  const isInter = RE_TT_INTER.test(t), isFin = RE_TT_FIN.test(t);
+  if (!isInter && !isFin) return false;
+
+  const time = readTTTime(t);
+  if (!time || time.sec < 30) return false;
+
+  const rest = t.slice(0, time.at) + ' ~ ' + t.slice(time.at + time.len);
+  const nums = [...rest.matchAll(/\b(\d{1,3})\b/g)].map(x => +x[1]).filter(n => byBib.has(n));
+  if (!nums.length) return false;
+
+  (isInter ? tt.inter : tt.finish).set(nums[0], time.sec);
+  const r = byBib.get(nums[0]);
+  tt.note = (isInter ? 'intermediate' : 'finish') + ' — ' + nums[0] + ' ' + r.last;
+  renderTT();
+  return true;
+}
+
+const hms = s => {
+  const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60;
+  return (h ? h + ':' + String(m).padStart(2,'0') : String(m)) + "'" + String(x).padStart(2,'0') + '"';
+};
+
+function ttRank(map){
+  return [...map.entries()].map(([bib, sec]) => ({r: byBib.get(bib), bib, sec}))
+    .filter(x => x.r).sort((a,b) => a.sec - b.sec);
+}
+
+/* generale virtuale: tempo di classifica prima della crono + tempo della crono */
+function ttVirtualGC(){
+  const rows = [];
+  for (const [bib, sec] of tt.finish){
+    const r = byBib.get(bib); if (!r || r.gcPos == null) continue;
+    const prev = gcSeconds(r); if (prev === null) continue;
+    rows.push({r, bib, t: prev + sec});
+  }
+  rows.sort((a,b) => a.t - b.t);
+  return rows;
+}
+
+function ttTable(rows, valOf, title, note){
+  if (!rows.length) return `<div class="box"><h3>${title}</h3><div class="hint">${note}</div></div>`;
+  const best = rows[0];
+  return `<div class="box"><h3>${title} — ${rows.length} riders</h3>
+    <table class="cl"><tbody>${rows.map((x,i) => `
+      <tr data-slug="${x.r.slug}">
+        <td class="pos">${i+1}</td>
+        <td class="bib">${x.bib}</td>
+        <td class="nm">${x.r.jersey ? `<span class="jbadge" style="background:${JCOL[x.r.jersey]}"></span>` : ''}${x.r.last}<small>${x.r.first}</small></td>
+        <td class="tm">${x.r.teamName}</td>
+        <td class="val">${valOf(x, i, best)}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+}
+
+function renderTT(){
+  const el = document.getElementById('p-tt');
+  if (!el) return;
+  const pending = DATA.riders.filter(r => r.gcPos && !tt.finish.has(r.bib)).length;
+  el.innerHTML = `
+    <div class="box">
+      <h3>Time trial${tt.note ? ' — ' + tt.note : ''}</h3>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <input id="ttKm" placeholder="Intermediate at km" value="${tt.interKm ?? ''}" style="flex:1 1 140px">
+        <button class="ghost" id="ttClear">Clear times</button>
+      </div>
+      <div class="hint" style="margin-top:8px">
+        Say it as the radio does: <b>“il 51 all’intermedio in 12 30”</b>, <b>“il 61 chiude in 24 15”</b>.
+        By hand: <b>tt 51 24 15</b> · <b>tt inter 51 12 30</b> · <b>tt reset</b>.
+        ${pending ? `<br>${pending} riders still to finish.` : ''}
+      </div>
+    </div>
+    ${ttTable(ttRank(tt.inter), (x,i,b) => i === 0 ? hms(x.sec) : '+' + mmss(x.sec - b.sec),
+              'Intermediate' + (tt.interKm ? ' — km ' + tt.interKm : ''), 'No intermediate times yet.')}
+    ${ttTable(ttRank(tt.finish), (x,i,b) => i === 0 ? hms(x.sec) : '+' + mmss(x.sec - b.sec),
+              'Stage result', 'No finish times yet.')}
+    ${ttTable(ttVirtualGC().map(x => ({...x, sec: x.t})),
+              (x,i,b) => i === 0 ? 'leader' : '+' + mmss(x.sec - b.sec),
+              'GC after the time trial', 'Needs finish times and an imported GC.')}`;
+
+  el.querySelectorAll('tr[data-slug]').forEach(tr =>
+    tr.onclick = () => window.open('https://www.procyclingstats.com/rider/' + tr.dataset.slug, '_blank'));
+  const km = document.getElementById('ttKm');
+  if (km) km.onchange = () => { tt.interKm = km.value.trim() || null; renderTT(); };
+  const cl = document.getElementById('ttClear');
+  if (cl) cl.onclick = () => { tt.inter.clear(); tt.finish.clear(); tt.note = ''; renderTT(); };
+}
+
 renderAllTables();
 renderLearn();
+renderTT();
 
 const saved = load();
 if (saved && saved.riders && saved.riders.length) applyData(saved);
