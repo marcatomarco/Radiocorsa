@@ -2616,14 +2616,16 @@ const BASE_PAT = {
   go:    'scatt|attacc|contrattacc|ataca|atacan|attaque|attack|escono|esce|usciti|sgancia|si stacca|staccat|se ne vanno|vanno via|prendono il largo|si avvantaggia|partit|escapad|fuga|allunga|break|va via|salen|se van|sortent|go clear',
   join:  'si unisc|rientr|se une|se unen|rejoign|bridge|joins|raggiung|riprende la testa|aggancia',
   over:  'neutraliz|ripres|riprend|richiamat|alcanzad|repris|caught|tutti insieme|gruppo compatto|gruppo unito|absorb|back together',
-  chase: 'insegu|contrattacc|contro attacc|controataque|persecu|chase|counter|poursuit|secondo gruppo|intercalat'
+  chase: 'insegu|contrattacc|contro attacc|controataque|persecu|chase|counter|poursuit|secondo gruppo|intercalat',
+  ttInter: 'intermedi|punto intermedio|paso intermedio|tiempo intermedio|primer paso|primer punto|parcial|referencia|punto de control|rilevament|passaggio|passa al|tempo al km|primo rilevamento|intermediate|split|checkpoint|first check|time check|intermediaire|temps intermediaire|pointage|point chrono|tussentijd|zwischenzeit',
+  ttFin:   'arriv|traguardo|meta|llegada|linea de meta|cruza la meta|final|finale|finish|crosses the line|ligne|franchit|chiude|ferma il tempo|stop the clock|tempo finale|tiempo final|temps final|ziel|eindtijd'
 };
 const LKEY = 'radio-corsa-formule';
-let learned = {pel:[], head:[], count:[], go:[], join:[], over:[], chase:[]};
+let learned = {pel:[], head:[], count:[], go:[], join:[], over:[], chase:[], ttInter:[], ttFin:[]};
 try{ Object.assign(learned, JSON.parse(localStorage.getItem(LKEY) || '{}')); }catch(e){}
 function saveLearned(){ try{ localStorage.setItem(LKEY, JSON.stringify(learned)); }catch(e){} }
 
-let REF_PEL, REF_HEAD, RE_COUNT, RE_GO, RE_JOIN, RE_OVER, RE_CHASE;
+let REF_PEL, REF_HEAD, RE_COUNT, RE_GO, RE_JOIN, RE_OVER, RE_CHASE, RE_TT_INTER, RE_TT_FIN;
 function rebuildPatterns(){
   const body = k => [BASE_PAT[k], ...(learned[k] || [])].filter(Boolean).join('|');
   REF_PEL  = new RegExp('\\b(?:' + body('pel')  + ')');
@@ -2633,6 +2635,8 @@ function rebuildPatterns(){
   RE_JOIN  = new RegExp('\\b(?:' + body('join')  + ')');
   RE_OVER  = new RegExp('\\b(?:' + body('over')  + ')');
   RE_CHASE = new RegExp('\\b(?:' + body('chase') + ')');
+  RE_TT_INTER = new RegExp('\\b(?:' + body('ttInter') + ')');
+  RE_TT_FIN   = new RegExp('\\b(?:' + body('ttFin')   + ')');
 }
 rebuildPatterns();
 
@@ -3600,7 +3604,9 @@ const LEARN_LABELS = {
   chase: 'inseguimento',
   head:  'tempo riferito alla testa',
   pel:   'tempo riferito al gruppo',
-  count: 'quantità di corridori'
+  count: 'quantità di corridori',
+  ttInter: 'crono: tempo intermedio',
+  ttFin: 'crono: tempo all\'arrivo'
 };
 let missed = [];            // frasi sentite che non hanno cambiato nulla
 
@@ -3675,8 +3681,6 @@ function renderLearn(){
    dettati dallo speaker; classifica di tappa e generale virtuale. */
 const tt = { interKm: null, inter: new Map(), finish: new Map(), note: '', mode: false };
 
-const RE_TT_INTER = /\b(?:intermedi|intermedio|intermediate|intermediaire|paso|passaggio|rilevamento|split)/;
-const RE_TT_FIN   = /\b(?:arriv|traguardo|meta|finish|final|conclude|chiude|ferma il tempo|tempo finale)/;
 
 /* Nel cronometro il tempo va letto PRIMA del dorsale, altrimenti il dorsale
    se lo mangia: "il 51 chiude in 24 e 15" -> tempo 24'15", corridore 51. */
@@ -3690,7 +3694,7 @@ const TT_TIME_PATS = [
 
 /* Il tempo si cerca dall'ultimo in avanti: lo speaker dice prima il dorsale
    e poi il tempo. Si accetta solo la lettura che lascia un dorsale valido. */
-function readTTTime(t){
+function readTTTime(t, fallbackBib){
   for (const rx of TT_TIME_PATS){
     rx.lastIndex = 0;
     const ms = [...t.matchAll(rx)];
@@ -3701,7 +3705,8 @@ function readTTTime(t){
       const sec = C !== null ? A*3600 + B*60 + C : A*60 + B;
       if (sec < 30 || sec > 10800) continue;
       const rest = t.slice(0, m.index) + ' ~ ' + t.slice(m.index + m[0].length);
-      const bib = (rest.match(/\b\d{1,3}\b/g) || []).map(Number).find(n => byBib.has(n));
+      let bib = (rest.match(/\b\d{1,3}\b/g) || []).map(Number).find(n => byBib.has(n));
+      if (bib === undefined && fallbackBib !== undefined) bib = fallbackBib;   // "Pogacar in 11 15"
       if (bib !== undefined) return {sec, bib};
     }
   }
@@ -3710,11 +3715,17 @@ function readTTTime(t){
 
 function updateTT(rawText, hits, lang){
   const t = wordsToDigits(norm(rawText), lang || langSel.value);
-  const isInter = RE_TT_INTER.test(t), isFin = RE_TT_FIN.test(t);
+  let isInter = RE_TT_INTER.test(t);
+  const isFin = RE_TT_FIN.test(t);
+  if (!isInter && tt.interKm){                        // "al chilometro 5"
+    const km = t.match(/\b(?:km|chilometr|kilometr|kilomet)\w*\s*(\d{1,3})/);
+    if (km && Math.abs(+km[1] - parseFloat(tt.interKm)) < 1.5) isInter = true;
+  }
   // fuori dalla cronometro servono le parole chiave; dentro, basta un tempo
   if (!tt.mode && !isInter && !isFin) return false;
 
-  const time = readTTTime(t);
+  const byName = hits.find(x => x.how === 'name');
+  const time = readTTTime(t, byName ? byName.rider.bib : undefined);
   if (!time) return false;
   const bib = time.bib;
 
