@@ -29,13 +29,23 @@
   button{font-family:inherit}
 
   /* ---------- layout ---------- */
-  .wrap{display:grid; grid-template-columns:360px 1fr; height:100vh; height:100dvh}
-  .side{border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; background:var(--panel)}
-  .main{display:flex; flex-direction:column; min-height:0}
-  @media (max-width:900px){
-    .wrap{grid-template-columns:1fr; grid-template-rows:auto 1fr; height:auto; min-height:100dvh}
-    .side{border-right:0; border-bottom:1px solid var(--line)}
+  .wrap{display:grid; grid-template-columns:340px minmax(0,1fr); height:100dvh; overflow:hidden}
+  .side{border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; min-width:0;
+        background:var(--panel); overflow-y:auto}
+  .main{display:flex; flex-direction:column; min-height:0; min-width:0; overflow:hidden}
+  @media (max-width:1000px){
+    .wrap{grid-template-columns:1fr; grid-template-rows:auto minmax(0,1fr)}
+    .side{border-right:0; border-bottom:1px solid var(--line); max-height:46dvh}
+    .head{padding:10px 14px 8px}
+    .race{font-size:21px}
+    .controls{padding:10px 14px; gap:8px}
+    .controls .row{gap:6px}
+    .mic{min-height:50px; padding:12px}
+    .feed{max-height:22dvh}
+    .tabs{padding:6px 12px 0}
+    .panel{padding:10px 12px 22px}
   }
+  .tablewrap{overflow-x:auto; -webkit-overflow-scrolling:touch}
 
   /* ---------- header ---------- */
   .head{padding:14px 16px 12px; border-bottom:1px solid var(--line)}
@@ -172,10 +182,34 @@
   table.cl tr.here.f{box-shadow:inset 3px 0 0 var(--morado)}
   table.cl tr td:first-child{border-radius:4px 0 0 4px}
   .jbadge{display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px; vertical-align:1px}
-  .rrow{display:grid; grid-template-columns:44px 1fr auto; gap:10px; align-items:center;
-        padding:9px 0; border-bottom:1px solid var(--line); cursor:pointer; font-size:14px}
+  .rrow{display:grid; grid-template-columns:42px 1fr auto; gap:10px; align-items:center;
+        padding:8px 11px; border-top:1px solid var(--line); cursor:pointer; font-size:14px}
+  .rrow:hover{background:var(--panel)}
   .rbib{font-family:var(--cond); font-weight:700; font-size:20px; text-align:right; color:#fff}
   .rteam{font-family:var(--mono); font-size:11px; color:var(--muted)}
+  .imp{display:none; margin:0 16px 12px; padding:12px; background:var(--panel2);
+       border:1px solid var(--line); border-radius:11px}
+  .imp.open{display:block}
+  .imp .row{flex-wrap:wrap}
+  .imp input{flex:1 1 120px; min-width:0}
+  .drop{border:1px dashed var(--line); border-radius:9px; padding:16px; text-align:center;
+        color:var(--muted); font-size:12px; margin-bottom:9px}
+  .drop.hot{border-color:var(--morado); color:var(--text)}
+  textarea{width:100%; min-height:90px; background:var(--panel); color:var(--text);
+           border:1px solid var(--line); border-radius:8px; padding:9px;
+           font-family:var(--mono); font-size:11px; line-height:1.5; resize:vertical}
+  .result{font-size:12px; line-height:1.6; margin:9px 0; color:#C3C9D3}
+  .result b{color:#fff}
+  .result .bad{color:var(--rojo)}
+  .primary{background:var(--morado); color:#fff; border:0; border-radius:9px; padding:11px 14px;
+           font-size:13px; font-weight:600; cursor:pointer; min-height:44px}
+  .primary:disabled{background:#333842; color:var(--muted); cursor:default}
+  .teamblock{margin-bottom:14px; border:1px solid var(--line); border-radius:10px; overflow:hidden}
+  .teamhead{display:flex; justify-content:space-between; align-items:baseline; background:var(--panel);
+            padding:8px 11px; font-family:var(--cond); font-weight:700; font-size:16px}
+  .teamhead span{font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:.14em}
+  .rname{font-family:var(--cond); font-weight:700; font-size:16px}
+  .rname small{font-family:var(--body); font-weight:400; font-size:11px; color:var(--muted); margin-left:6px}
   .note{padding:10px 20px 18px; color:var(--muted); font-size:12px; line-height:1.55; border-top:1px solid var(--line)}
   .note b{color:#C3C9D3; font-weight:600}
 </style>
@@ -221,8 +255,26 @@
         <button class="ghost" id="demo" style="flex:1">Demo</button>
       </div>
       <div class="row">
-        <button class="ghost" id="openImport" style="flex:1">Import communiqué</button>
+        <button class="ghost" id="openImport" style="flex:1">Import communiqué ▾</button>
       </div>
+      <div class="imp" id="sheet">
+        <div class="drop" id="drop">Drop the PDF here — or <label style="color:var(--text);text-decoration:underline;cursor:pointer">choose a file<input type="file" id="file" accept=".pdf,.txt" hidden></label></div>
+        <textarea id="paste" placeholder="…or paste the communiqué text here"></textarea>
+        <div class="row" style="margin-top:8px;gap:6px">
+          <input id="raceName" placeholder="Race name">
+          <input id="stageName" placeholder="Stage">
+        </div>
+        <div class="row" style="margin-top:6px;gap:6px">
+          <button class="ghost" id="analyze" style="flex:1">Analyse</button>
+        </div>
+        <div class="result" id="result"></div>
+        <div class="row" style="gap:6px">
+          <button class="primary" id="apply" style="flex:2" disabled>Apply</button>
+          <button class="ghost" id="reset" style="flex:1">Sample</button>
+          <button class="ghost" id="closeImport" style="flex:1">Close</button>
+        </div>
+      </div>
+
     </div>
 
     <div class="feedhead"><span class="label">What it hears</span><span class="label" id="status">idle</span></div>
@@ -239,6 +291,7 @@
       <button class="tab" data-tab="points">Points</button>
       <button class="tab" data-tab="kom">KOM</button>
       <button class="tab" data-tab="youth">Youth</button>
+      <button class="tab" data-tab="learn">Learn</button>
       <button class="tab" data-tab="roster">Start list</button>
     </div>
 
@@ -258,6 +311,8 @@
       <section class="panel" id="p-kom"><div class="tablewrap" id="t-kom"></div></section>
       <section class="panel" id="p-youth"><div class="tablewrap" id="t-youth"></div></section>
 
+      <section class="panel" id="p-learn"></section>
+
       <section class="panel" id="p-roster">
         <div class="tablewrap">
           <input id="search" placeholder="Search bib, surname or team" style="margin-bottom:10px">
@@ -273,32 +328,6 @@
       for a long time, listening restarts on its own.
     </div>
   </main>
-</div>
-
-<div class="sheet" id="sheet">
-  <div class="sheetbox">
-    <h2>Import the communiqué</h2>
-    <p>Load the official PDF for the day, or paste the text. Start list, general classification, points,
-       KOM and young rider are all read. The data stays on this device.</p>
-
-    <div class="drop" id="drop">Drop the PDF here — or <label style="color:var(--text);text-decoration:underline;cursor:pointer">choose a file<input type="file" id="file" accept=".pdf,.txt" hidden></label></div>
-
-    <textarea id="paste" placeholder="…or paste the communiqué text here"></textarea>
-
-    <div class="row" style="margin-top:12px;gap:8px">
-      <button class="ghost" id="analyze">Analyse</button>
-      <input id="raceName" placeholder="Race name" style="flex:1">
-      <input id="stageName" placeholder="Stage" style="flex:1">
-    </div>
-
-    <div class="result" id="result"></div>
-
-    <div class="row" style="gap:8px">
-      <button class="primary" id="apply" disabled>Apply</button>
-      <button class="ghost" id="closeImport">Close</button>
-      <button class="ghost" id="reset" style="margin-left:auto">Sample data</button>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -2573,8 +2602,34 @@ function wordsToDigits(text, lang){
    I tempi si estraggono per primi e si mascherano: cosi' "quindici secondi"
    non diventa mai il dorsale 15. Ogni tempo porta con se' il riferimento:
    "sul gruppo" = distacco dal gruppo, "dai primi" = distacco dalla testa. */
-const REF_PEL  = /\b(?:di vantaggio|sul gruppo|sul plotone|de ventaja|gruppo|grupo|plotone|peloton|pelot[oó]n|bunch)/;
-const REF_HEAD = /\b(?:gruppo di testa|grupo de cabeza|di ritardo|dal leader|del leader|prim[oi]|testa|battistrada|fuggitiv|fuga|escapad|leader|t[eê]te|front)/;
+/* Dizionario delle formule. Le voci imparate si aggiungono a quelle di base
+   e restano salvate sul dispositivo. */
+const BASE_PAT = {
+  pel:   'di vantaggio|sul gruppo|sul plotone|de ventaja|gruppo|grupo|plotone|peloton|pelot[oó]n|bunch',
+  head:  'gruppo di testa|grupo de cabeza|di ritardo|dal leader|del leader|prim[oi]|testa|battistrada|fuggitiv|fuga|escapad|leader|t[eê]te|front',
+  count: 'corridor[ie]|ciclist[ai]|uomini|atlet[ie]|unita|inseguitor[ie]|fuggitiv[oi]|battistrada|attaccant[ie]|scappat[oi]|element[oi]|riders?|men|coureurs?|corredores?|hombres|echapp[eé]s?|leaders?',
+  go:    'scatt|attacc|contrattacc|ataca|atacan|attaque|attack|escono|esce|usciti|sgancia|si stacca|staccat|se ne vanno|vanno via|prendono il largo|si avvantaggia|partit|escapad|fuga|allunga|break|va via|salen|se van|sortent|go clear',
+  join:  'si unisc|rientr|se une|se unen|rejoign|bridge|joins|raggiung|riprende la testa|aggancia',
+  over:  'neutraliz|ripres|riprend|richiamat|alcanzad|repris|caught|tutti insieme|gruppo compatto|gruppo unito|absorb|back together',
+  chase: 'insegu|contrattacc|contro attacc|controataque|persecu|chase|counter|poursuit|secondo gruppo|intercalat'
+};
+const LKEY = 'radio-corsa-formule';
+let learned = {pel:[], head:[], count:[], go:[], join:[], over:[], chase:[]};
+try{ Object.assign(learned, JSON.parse(localStorage.getItem(LKEY) || '{}')); }catch(e){}
+function saveLearned(){ try{ localStorage.setItem(LKEY, JSON.stringify(learned)); }catch(e){} }
+
+let REF_PEL, REF_HEAD, RE_COUNT, RE_GO, RE_JOIN, RE_OVER, RE_CHASE;
+function rebuildPatterns(){
+  const body = k => [BASE_PAT[k], ...(learned[k] || [])].filter(Boolean).join('|');
+  REF_PEL  = new RegExp('\\b(?:' + body('pel')  + ')');
+  REF_HEAD = new RegExp('\\b(?:' + body('head') + ')');
+  RE_COUNT = new RegExp('\\b(\\d{1,3})\\s*(?:' + body('count') + ')\\b', 'g');
+  RE_GO    = new RegExp('\\b(?:' + body('go')    + ')');
+  RE_JOIN  = new RegExp('\\b(?:' + body('join')  + ')');
+  RE_OVER  = new RegExp('\\b(?:' + body('over')  + ')');
+  RE_CHASE = new RegExp('\\b(?:' + body('chase') + ')');
+}
+rebuildPatterns();
 
 function refAfter(tail){
   const h = tail.search(REF_HEAD), p = tail.search(REF_PEL);
@@ -2584,7 +2639,6 @@ function refAfter(tail){
   return h <= p ? 'head' : 'peloton';       // vince il riferimento piu' vicino al tempo
 }
 
-const RE_COUNT = /\b(\d{1,3})\s*(?:corridor[ie]|ciclist[ai]|uomini|atlet[ie]|unita|inseguitor[ie]|fuggitiv[oi]|battistrada|attaccant[ie]|scappat[oi]|element[oi]|riders?|men|coureurs?|corredores?|hombres|echapp[eé]s?|leaders?)\b/g;
 const RE_ARTNUM = /\b(?:i|gli|le|los|las|les|the)\s+(\d{1,3})\b(?!\s*(?:secondi|secondo|minuti|minuto|segundos|seconds))/g;
 const RE_OTHERS = /\b(?:altri|altre|ancora|otros|otras|autres|other|another)\s+(\d{1,3})\b/g;
 const RE_GROUPOF = /\b(?:gruppetto|grupp?o|grupo|group|groupe)\s+(?:di|de|of)\s+(\d{1,3})\b/g;
@@ -2920,20 +2974,29 @@ document.getElementById('toggleRoster').onclick = () => { openTab('roster'); ren
 
 function renderRoster(q=''){
   const s = norm(q).trim();
-  const list = DATA.riders.filter(r => !s || String(r.bib).startsWith(s) || norm(r.last+' '+r.first+' '+r.teamName).includes(s));
-  document.getElementById('rosterList').innerHTML = list.map(r => `
-    <div class="rrow" data-bib="${r.bib}">
-      <span class="rbib">${r.bib}</span>
-      <span>${r.last}, ${r.first}${r.status ? ' — <span style="color:var(--rojo)">'+r.status+'</span>' : ''}</span>
-      <span class="rteam">${r.team}${r.gcPos ? ' · '+r.gcPos+'°' : ''}</span>
-    </div>`).join('');
+  const list = DATA.riders.filter(r => !s || String(r.bib).startsWith(s) ||
+                 norm(r.last + ' ' + r.first + ' ' + r.teamName + ' ' + r.team).includes(s));
+  const codes = [...new Set(list.map(r => r.team))]
+    .sort((a,b) => Math.min(...list.filter(r=>r.team===a).map(r=>r.bib))
+                 - Math.min(...list.filter(r=>r.team===b).map(r=>r.bib)));
+  document.getElementById('rosterList').innerHTML = codes.map(code => {
+    const rs = list.filter(r => r.team === code).sort((a,b) => a.bib - b.bib);
+    return `<div class="teamblock">
+      <div class="teamhead">${rs[0].teamName}<span>${code}</span></div>
+      ${rs.map(r => `<div class="rrow" data-slug="${r.slug}" data-bib="${r.bib}">
+          <span class="rbib">${r.bib}</span>
+          <span class="rname">${r.jersey ? `<span class="jbadge" style="background:${JCOL[r.jersey]}"></span>` : ''}${r.last}<small>${r.first}</small>${r.status ? ` <em style="color:var(--rojo);font-style:normal;font-size:11px">${r.status}</em>` : ''}</span>
+          <span class="rteam">${r.gcPos ? r.gcPos + '° · ' + (r.gcGap||'').replace(/^a /,'+') : '—'}</span>
+        </div>`).join('')}
+    </div>`;
+  }).join('') || '<div class="hint">Nothing matches.</div>';
+
+  document.getElementById('rosterList').querySelectorAll('.rrow').forEach(row =>
+    row.onclick = () => window.open('https://www.procyclingstats.com/rider/' + row.dataset.slug, '_blank'));
 }
 renderRoster();
 document.getElementById('search').addEventListener('input', e => renderRoster(e.target.value));
-document.getElementById('rosterList').addEventListener('click', e => {
-  const row = e.target.closest('.rrow');
-  if (row) addRider(byBib.get(parseInt(row.dataset.bib,10)), 'list');
-});
+
 
 /* ================= importazione comunicati ================= */
 const U = s => s.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -3118,12 +3181,13 @@ const pasteEl = document.getElementById('paste');
 let pending = null;
 
 document.getElementById('openImport').onclick = () => {
-  sheet.classList.add('open');
+  sheet.classList.toggle('open');
+  if (!sheet.classList.contains('open')) return;
   document.getElementById('raceName').value = DATA.race || '';
   document.getElementById('stageName').value = DATA.stage || '';
 };
 document.getElementById('closeImport').onclick = () => sheet.classList.remove('open');
-sheet.addEventListener('click', e => { if (e.target === sheet) sheet.classList.remove('open'); });
+
 
 async function ingest(file){
   resultEl.textContent = 'Reading the file…';
@@ -3187,9 +3251,6 @@ function gcSeconds(r){
 }
 const mmss = s => s < 60 ? s + '"' : Math.floor(s/60) + "'" + String(s%60).padStart(2,'0') + '"';
 
-const RE_GO    = /\b(?:scatt|attacc|contrattacc|ataca|atacan|attaque|attack|escono|esce|usciti|sgancia|si stacca|staccat|se ne vanno|vanno via|prendono il largo|si avvantaggia|partit|escapad|fuga|allunga|break|va via|salen|se van|sortent|go clear)/;
-const RE_JOIN  = /\b(?:si unisc|rientr|se une|se unen|rejoign|bridge|joins|raggiung|riprende la testa|aggancia)/;
-const RE_OVER  = /\b(?:neutraliz|ripres|riprend|richiamat|alcanzad|repris|caught|tutti insieme|gruppo compatto|gruppo unito|absorb|back together)/;
 const RE_FROM_GROUP = /\b(?:dal gruppo|dal plotone|del grupo|from the bunch|from the peloton)/;
 
 const inAnyGroup = bib => race.groups.some(g => g.riders.has(bib));
@@ -3215,7 +3276,6 @@ function tidy(){
   }
 }
 
-const RE_CHASE = /\b(?:insegu|contrattacc|contro attacc|controataque|persecu|chase|counter|poursuit|secondo gruppo|intercalat)/;
 
 function updateRace(rawText, hits, lang){
   const {masked, times, count} = detect(rawText, lang || langSel.value);
@@ -3290,6 +3350,7 @@ function updateRace(rawText, hits, lang){
   }
 
   if (touched){ tidy(); renderSituation(); renderRoad(); renderAllTables(); }
+  else if (typeof noteMissed === 'function') noteMissed(rawText);
 }
 
 const groupGapOf = bib => {
@@ -3424,7 +3485,86 @@ function renderRoad(){
       <b>GR</b><span>${pel === null ? '—' : pel === 0 ? 'together' : '+' + mmss(pel)}</span><i></i></div>`;
 }
 
+/* ================= apprendimento delle formule ================= */
+const LEARN_LABELS = {
+  go:    'un gruppo va via',
+  join:  'qualcuno rientra',
+  over:  'ripresi / gruppo compatto',
+  chase: 'inseguimento',
+  head:  'tempo riferito alla testa',
+  pel:   'tempo riferito al gruppo',
+  count: 'quantità di corridori'
+};
+let missed = [];            // frasi sentite che non hanno cambiato nulla
+
+function noteMissed(txt){
+  const clean = txt.trim();
+  if (clean.split(/\s+/).length < 3) return;
+  if (missed.includes(clean)) return;
+  missed.unshift(clean);
+  missed = missed.slice(0, 12);
+  const b = document.querySelector('.tab[data-tab="learn"]');
+  if (b) b.textContent = 'Learn' + (missed.length ? ' · ' + missed.length : '');
+  renderLearn();
+}
+
+function wordsOf(txt){
+  return [...new Set(norm(txt).split(/\s+/).filter(w => w.length > 3 && !/^\d+$/.test(w)))].slice(0, 14);
+}
+
+function renderLearn(){
+  const el = document.getElementById('p-learn');
+  if (!el) return;
+  const known = Object.keys(LEARN_LABELS).map(k =>
+    (learned[k] || []).length
+      ? `<div class="grp"><span class="gname" style="min-width:150px;font-size:14px">${LEARN_LABELS[k]}</span>
+         <span class="who">${learned[k].map(w =>
+           `<button class="ghostchip" data-forget="${k}|${w}" style="cursor:pointer">${w} ✕</button>`).join(' ')}</span></div>`
+      : '').join('');
+
+  el.innerHTML = `
+    <div class="box">
+      <h3>Teach a phrase</h3>
+      <div class="hint" style="margin-bottom:8px">Phrases that changed nothing show up here.
+        Pick what the phrase meant, then tap the word that carries that meaning. It is remembered for next time.</div>
+      ${missed.length ? missed.map((m,i) => `
+        <div class="grp" style="display:block">
+          <div style="font-size:13px;margin-bottom:6px">“${m}”</div>
+          <div class="chips" data-phrase="${i}">
+            ${Object.keys(LEARN_LABELS).map(k =>
+              `<button class="ghostchip" data-cat="${k}" data-i="${i}" style="cursor:pointer">${LEARN_LABELS[k]}</button>`).join('')}
+          </div>
+          <div class="chips" id="words-${i}" style="margin-top:6px"></div>
+        </div>`).join('')
+        : '<div class="hint">Nothing pending — everything heard so far was understood.</div>'}
+    </div>
+    ${known.trim() ? `<div class="box"><h3>Learned so far</h3>${known}</div>` : ''}`;
+
+  el.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.i, cat = b.dataset.cat;
+    const box = document.getElementById('words-' + i);
+    box.innerHTML = wordsOf(missed[i]).map(w =>
+      `<button class="chipb" data-add="${cat}|${w}" style="font-size:14px">${w}</button>`).join('');
+    box.querySelectorAll('[data-add]').forEach(x => x.onclick = () => {
+      const [c, word] = x.dataset.add.split('|');
+      learned[c] = [...new Set([...(learned[c] || []), word])];
+      saveLearned(); rebuildPatterns();
+      missed.splice(i, 1);
+      const t = document.querySelector('.tab[data-tab="learn"]');
+      if (t) t.textContent = 'Learn' + (missed.length ? ' · ' + missed.length : '');
+      renderLearn();
+    });
+  });
+
+  el.querySelectorAll('[data-forget]').forEach(b => b.onclick = () => {
+    const [c, word] = b.dataset.forget.split('|');
+    learned[c] = (learned[c] || []).filter(w => w !== word);
+    saveLearned(); rebuildPatterns(); renderLearn();
+  });
+}
+
 renderAllTables();
+renderLearn();
 
 const saved = load();
 if (saved && saved.riders && saved.riders.length) applyData(saved);
