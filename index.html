@@ -3399,7 +3399,7 @@ function updateRace(rawText, hits, lang){
     } else {
       race.groups = []; race.pelotonGap = null; race.note = 'all together';
     }
-    tidy(); renderSituation(); renderRoad(); renderAllTables(); return;
+    tidy(); renderSituation(); renderRoad(); renderAllTables(); logHeard(rawText, race.note); return;
   }
 
   let tHead = times.find(x => x.ref === 'head');
@@ -3418,7 +3418,7 @@ function updateRace(rawText, hits, lang){
     bibs.forEach(b => { dropEverywhere(b); target.riders.add(b); });
     target.size = Math.max(target.size || 0, target.riders.size);
     race.note = 'group named';
-    tidy(); renderSituation(); renderRoad(); renderAllTables(); return;
+    tidy(); renderSituation(); renderRoad(); renderAllTables(); logHeard(rawText, race.note); return;
   }
 
   if ((bibs.length || count) && (RE_GO.test(t) || RE_JOIN.test(t) || RE_CHASE.test(t))){
@@ -3460,8 +3460,8 @@ function updateRace(rawText, hits, lang){
     race.pelotonGap = tAny.sec; touched = true;
   }
 
-  if (touched){ tidy(); renderSituation(); renderRoad(); renderAllTables(); }
-  else if (typeof noteMissed === 'function') noteMissed(rawText);
+  if (touched){ tidy(); renderSituation(); renderRoad(); renderAllTables(); logHeard(rawText, race.note || 'groups updated'); }
+  else logHeard(rawText, '');
 }
 
 const groupGapOf = bib => {
@@ -3598,31 +3598,39 @@ function renderRoad(){
 
 /* ================= apprendimento delle formule ================= */
 const LEARN_LABELS = {
-  go:    'un gruppo va via',
-  join:  'qualcuno rientra',
-  over:  'ripresi / gruppo compatto',
-  chase: 'inseguimento',
-  head:  'tempo riferito alla testa',
-  pel:   'tempo riferito al gruppo',
-  count: 'quantità di corridori',
+  go:      'un gruppo va via',
+  join:    'qualcuno rientra',
+  over:    'ripresi / gruppo compatto',
+  chase:   'inseguimento',
+  head:    'tempo riferito alla testa',
+  pel:     'tempo riferito al gruppo',
+  count:   'quantità di corridori',
   ttInter: 'crono: tempo intermedio',
-  ttFin: 'crono: tempo all\'arrivo'
+  ttFin:   'crono: tempo all\u2019arrivo'
 };
-let missed = [];            // frasi sentite che non hanno cambiato nulla
+const HKEY = 'radio-corsa-frasi';
+let heard = [];
+try{ heard = JSON.parse(localStorage.getItem(HKEY) || '[]'); }catch(e){}
+function saveHeard(){ try{ localStorage.setItem(HKEY, JSON.stringify(heard.slice(0, 40))); }catch(e){} }
 
-function noteMissed(txt){
-  const clean = txt.trim();
-  if (clean.split(/\s+/).length < 3) return;
-  if (missed.includes(clean)) return;
-  missed.unshift(clean);
-  missed = missed.slice(0, 12);
+/* ogni frase finita viene registrata, capita o no */
+function logHeard(txt, outcome){
+  const text = (txt || '').trim();
+  if (text.split(/\s+/).length < 2) return;
+  const prev = heard.find(x => x.text === text);
+  if (prev){ prev.outcome = outcome; prev.when = Date.now(); }
+  else heard.unshift({text, outcome, note: '', when: Date.now()});
+  heard = heard.slice(0, 40);
+  saveHeard();
   const b = document.querySelector('.tab[data-tab="learn"]');
-  if (b) b.textContent = 'Learn' + (missed.length ? ' · ' + missed.length : '');
+  const bad = heard.filter(x => !x.outcome).length;
+  if (b) b.textContent = 'Learn' + (bad ? ' · ' + bad : '');
   renderLearn();
 }
+function noteMissed(txt){ logHeard(txt, ''); }      // '' = non capita
 
 function wordsOf(txt){
-  return [...new Set(norm(txt).split(/\s+/).filter(w => w.length > 3 && !/^\d+$/.test(w)))].slice(0, 14);
+  return [...new Set(norm(txt).split(/\s+/).filter(w => w.length > 2 && !/^\d+$/.test(w)))].slice(0, 16);
 }
 
 function renderLearn(){
@@ -3630,50 +3638,77 @@ function renderLearn(){
   if (!el) return;
   const known = Object.keys(LEARN_LABELS).map(k =>
     (learned[k] || []).length
-      ? `<div class="grp"><span class="gname" style="min-width:150px;font-size:14px">${LEARN_LABELS[k]}</span>
+      ? `<div class="grp"><span class="gname" style="min-width:170px;font-size:13px">${LEARN_LABELS[k]}</span>
          <span class="who">${learned[k].map(w =>
            `<button class="ghostchip" data-forget="${k}|${w}" style="cursor:pointer">${w} ✕</button>`).join(' ')}</span></div>`
       : '').join('');
 
   el.innerHTML = `
     <div class="box">
-      <h3>Teach a phrase</h3>
-      <div class="hint" style="margin-bottom:8px">Phrases that changed nothing show up here.
-        Pick what the phrase meant, then tap the word that carries that meaning. It is remembered for next time.</div>
-      ${missed.length ? missed.map((m,i) => `
+      <h3>Phrases heard</h3>
+      <div class="row" style="gap:6px;margin-bottom:10px">
+        <input id="learnAdd" placeholder="Add a phrase by hand — press enter" style="flex:1">
+      </div>
+      <div class="hint" style="margin-bottom:10px">Every phrase lands here, understood or not.
+        Tap <b>Teach</b> on the ones that went wrong, choose the meaning, then tap the word that carries it.
+        The note field is for you — write what should have happened.</div>
+      ${heard.length ? heard.map((p,i) => `
         <div class="grp" style="display:block">
-          <div style="font-size:13px;margin-bottom:6px">“${m}”</div>
-          <div class="chips" data-phrase="${i}">
-            ${Object.keys(LEARN_LABELS).map(k =>
-              `<button class="ghostchip" data-cat="${k}" data-i="${i}" style="cursor:pointer">${LEARN_LABELS[k]}</button>`).join('')}
+          <div style="font-size:13px;margin-bottom:5px">
+            <span class="ghostchip" style="border-color:${p.outcome ? 'var(--verde)' : 'var(--rojo)'};color:${p.outcome ? 'var(--verde)' : 'var(--rojo)'}">${p.outcome || 'not understood'}</span>
+            “${p.text}”
           </div>
-          <div class="chips" id="words-${i}" style="margin-top:6px"></div>
+          <div class="chips" style="margin-bottom:5px">
+            <button class="ghostchip" data-teach="${i}" style="cursor:pointer">Teach ▾</button>
+            <button class="ghostchip" data-again="${i}" style="cursor:pointer">Run again</button>
+            <button class="ghostchip" data-drop="${i}" style="cursor:pointer">✕</button>
+            <input data-note="${i}" value="${(p.note||'').replace(/"/g,'&quot;')}"
+                   placeholder="what should have happened" style="flex:1 1 200px;font-size:12px;padding:6px 8px;min-height:34px">
+          </div>
+          <div class="chips" id="cats-${i}"></div>
+          <div class="chips" id="words-${i}" style="margin-top:5px"></div>
         </div>`).join('')
-        : '<div class="hint">Nothing pending — everything heard so far was understood.</div>'}
+        : '<div class="hint">Nothing heard yet.</div>'}
     </div>
-    ${known.trim() ? `<div class="box"><h3>Learned so far</h3>${known}</div>` : ''}`;
+    ${known.trim() ? `<div class="box"><h3>Learned words</h3>${known}</div>` : ''}`;
 
-  el.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => {
-    const i = +b.dataset.i, cat = b.dataset.cat;
-    const box = document.getElementById('words-' + i);
-    box.innerHTML = wordsOf(missed[i]).map(w =>
-      `<button class="chipb" data-add="${cat}|${w}" style="font-size:14px">${w}</button>`).join('');
-    box.querySelectorAll('[data-add]').forEach(x => x.onclick = () => {
-      const [c, word] = x.dataset.add.split('|');
-      learned[c] = [...new Set([...(learned[c] || []), word])];
-      saveLearned(); rebuildPatterns();
-      missed.splice(i, 1);
-      const t = document.querySelector('.tab[data-tab="learn"]');
-      if (t) t.textContent = 'Learn' + (missed.length ? ' · ' + missed.length : '');
-      renderLearn();
+  el.querySelectorAll('[data-teach]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.teach;
+    const box = document.getElementById('cats-' + i);
+    box.innerHTML = box.innerHTML ? '' : Object.keys(LEARN_LABELS).map(k =>
+      `<button class="ghostchip" data-cat="${k}" data-i="${i}" style="cursor:pointer">${LEARN_LABELS[k]}</button>`).join('');
+    box.querySelectorAll('[data-cat]').forEach(c => c.onclick = () => {
+      const wb = document.getElementById('words-' + i);
+      wb.innerHTML = wordsOf(heard[i].text).map(w =>
+        `<button class="chipb" data-add="${c.dataset.cat}|${w}" style="font-size:13px">${w}</button>`).join('');
+      wb.querySelectorAll('[data-add]').forEach(x => x.onclick = () => {
+        const [cat, word] = x.dataset.add.split('|');
+        learned[cat] = [...new Set([...(learned[cat] || []), word])];
+        saveLearned(); rebuildPatterns();
+        heard[i].outcome = 'taught: ' + LEARN_LABELS[cat];
+        saveHeard(); renderLearn();
+      });
     });
   });
 
+  el.querySelectorAll('[data-again]').forEach(b => b.onclick = () => {
+    const p = heard[+b.dataset.again];
+    feedPhrase(p.text, 'retry');
+    renderLearn();
+  });
+  el.querySelectorAll('[data-drop]').forEach(b => b.onclick = () => {
+    heard.splice(+b.dataset.drop, 1); saveHeard(); renderLearn();
+  });
+  el.querySelectorAll('[data-note]').forEach(inp => inp.onchange = () => {
+    heard[+inp.dataset.note].note = inp.value; saveHeard();
+  });
   el.querySelectorAll('[data-forget]').forEach(b => b.onclick = () => {
     const [c, word] = b.dataset.forget.split('|');
     learned[c] = (learned[c] || []).filter(w => w !== word);
     saveLearned(); rebuildPatterns(); renderLearn();
   });
+  const add = document.getElementById('learnAdd');
+  if (add) add.onkeydown = e => { if (e.key === 'Enter' && add.value.trim()){ logHeard(add.value.trim(), ''); add.value = ''; } };
 }
 
 /* ================= cronometro =================
@@ -3684,29 +3719,49 @@ const tt = { interKm: null, inter: new Map(), finish: new Map(), note: '', mode:
 
 /* Nel cronometro il tempo va letto PRIMA del dorsale, altrimenti il dorsale
    se lo mangia: "il 51 chiude in 24 e 15" -> tempo 24'15", corridore 51. */
+/* le desinenze cambiano lingua per lingua: "minuto/minuti/minutos/minutes" */
+const U_H   = '(?:or[ae]\\b|hora\\w*|heure\\w*|hour\\w*|stunde\\w*|hs\\b|h\\b)';
+const U_MIN = '(?:minut\\w*|mins?\\b)';
+const U_SEC = '(?:second\\w*|segund\\w*|sekund\\w*|secs?\\b|seg\\b)';
+const JN    = '(?:(?:and|und|ed|et|e|y)\\b)?';   // le piu' lunghe per prime
+
+/* Ogni forma in cui uno speaker puo' dire un tempo. Le piu' esplicite per prime. */
 const TT_TIME_PATS = [
-  /(\d{1,2})\s*[:'’]\s*(\d{1,2})\s*[:"”]\s*(\d{1,2})\b/g,      // 1:05:30
-  /(\d{1,2})\s*[:'’]\s*(\d{1,2})\b/g,                            // 24'15
-  /\b(\d{1,2})\s+(?:e|y|et|and)\s+(\d{1,2})\b/g,                 // 24 e 15
-  /\b([0-3])\s+(\d{1,2})\s+(\d{1,2})\b/g,                        // 1 05 30 (ore 0-3)
-  /\b(\d{1,2})\s+(\d{1,2})\b/g,                                  // 24 15
+  // "1 ora 5 minuti e 30 secondi"
+  { rx: new RegExp(`\\b(\\d{1,2})\\s*${U_H}\\s*${JN}\\s*(\\d{1,2})?\\s*${U_MIN}?\\s*${JN}\\s*(\\d{1,2})?\\s*${U_SEC}?`,'g'),
+    calc: m => +m[1]*3600 + (+m[2]||0)*60 + (+m[3]||0) },
+  // "cinque minuti e quindici secondi"
+  { rx: new RegExp(`\\b(\\d{1,3})\\s*${U_MIN}\\s*${JN}\\s*(\\d{1,2})?\\s*${U_SEC}?`,'g'),
+    calc: m => +m[1]*60 + (+m[2]||0) },
+  // "1:05:30"
+  { rx: /\b(\d{1,2})\s*[:'’]\s*(\d{1,2})\s*[:"”]\s*(\d{1,2})\b/g,
+    calc: m => +m[1]*3600 + +m[2]*60 + +m[3] },
+  // "24'15"
+  { rx: /\b(\d{1,2})\s*[:'’]\s*(\d{1,2})\b/g, calc: m => +m[1]*60 + +m[2] },
+  // "quarantacinque secondi"
+  { rx: new RegExp(`\\b(\\d{1,3})\\s*${U_SEC}`,'g'), calc: m => +m[1] },
+  // "ventiquattro e quindici"
+  { rx: /\b(\d{1,2})\s+(?:and|und|ed|et|e|y)\s+(\d{1,2})\b/g, calc: m => +m[1]*60 + +m[2] },
+  // "1 05 30"
+  { rx: /\b([0-3])\s+(\d{1,2})\s+(\d{1,2})\b/g, calc: m => +m[1]*3600 + +m[2]*60 + +m[3] },
+  // "24 15"
+  { rx: /\b(\d{1,2})\s+(\d{1,2})\b/g, calc: m => +m[1]*60 + +m[2] },
 ];
 
-/* Il tempo si cerca dall'ultimo in avanti: lo speaker dice prima il dorsale
-   e poi il tempo. Si accetta solo la lettura che lascia un dorsale valido. */
+/* Si cerca dall'ultima occorrenza in avanti — lo speaker dice prima il dorsale
+   e poi il tempo — e si accetta solo la lettura che lascia un dorsale valido. */
 function readTTTime(t, fallbackBib){
-  for (const rx of TT_TIME_PATS){
+  for (const {rx, calc} of TT_TIME_PATS){
     rx.lastIndex = 0;
     const ms = [...t.matchAll(rx)];
     for (let i = ms.length - 1; i >= 0; i--){
       const m = ms[i];
-      const A = +m[1], B = +m[2], C = m[3] !== undefined ? +m[3] : null;
-      if (B > 59 || (C !== null && C > 59)) continue;
-      const sec = C !== null ? A*3600 + B*60 + C : A*60 + B;
-      if (sec < 30 || sec > 10800) continue;
+      if (!m[0].trim()) continue;
+      const sec = calc(m);
+      if (!isFinite(sec) || sec < 5 || sec > 14400) continue;
       const rest = t.slice(0, m.index) + ' ~ ' + t.slice(m.index + m[0].length);
       let bib = (rest.match(/\b\d{1,3}\b/g) || []).map(Number).find(n => byBib.has(n));
-      if (bib === undefined && fallbackBib !== undefined) bib = fallbackBib;   // "Pogacar in 11 15"
+      if (bib === undefined && fallbackBib !== undefined) bib = fallbackBib;
       if (bib !== undefined) return {sec, bib};
     }
   }
@@ -3744,6 +3799,7 @@ function updateTT(rawText, hits, lang){
   (kind === 'inter' ? tt.inter : tt.finish).set(bib, time.sec);
   const r = byBib.get(bib);
   tt.note = (kind === 'inter' ? 'intermediate' : 'finish') + ' — ' + bib + ' ' + r.last;
+  logHeard(rawText, tt.note);
   renderTT();
   return true;
 }
