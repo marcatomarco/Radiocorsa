@@ -46,6 +46,11 @@
     .panel{padding:10px 12px 22px}
   }
   .tablewrap{overflow-x:auto; -webkit-overflow-scrolling:touch}
+  .scroll5{max-height:238px; overflow-y:auto; -webkit-overflow-scrolling:touch;
+           border:1px solid var(--line); border-radius:8px}
+  .scroll5 table.cl th{position:sticky; top:0; background:var(--panel); z-index:1}
+  .ttboth td.t1{font-family:var(--mono); color:#9AA3B0; text-align:right; white-space:nowrap}
+  .ttboth td.t2{font-family:var(--mono); color:#fff; text-align:right; white-space:nowrap}
 
   /* ---------- header ---------- */
   .head{padding:14px 16px 12px; border-bottom:1px solid var(--line)}
@@ -248,8 +253,12 @@
       <div class="row">
         <select id="device" style="flex:1"><option value="">default microphone</option></select>
       </div>
-      <div class="row" id="preloadRow" style="display:none">
-        <button class="ghost" id="preload" style="flex:1">Download Whisper model now (wifi)</button>
+      <div class="row" id="preloadRow" style="display:none;flex-direction:column;gap:6px">
+        <select id="wModel" style="width:100%">
+          <option value="onnx-community/whisper-base">Whisper base — 80 MB, weak on radio</option>
+          <option value="onnx-community/whisper-small" selected>Whisper small — 250 MB, much better</option>
+        </select>
+        <button class="ghost" id="preload" style="width:100%">Download model now (wifi)</button>
       </div>
       <div class="row" style="gap:10px">
         <button class="ghost" id="testMic" style="white-space:nowrap">Test mic</button>
@@ -2936,6 +2945,7 @@ engineSel.onchange = () => {
   diag(usingWhisper() ? 'Whisper selected — first run downloads the model' : 'browser engine');
 };
 document.getElementById('preload').onclick = () => loadWhisper();
+document.getElementById('wModel').onchange = () => { whisper = null; whisperLoading = null; diag('model changed — press download'); };
 
 micBtn.onclick  = () => listening ? stopListening() : startListening();
 langSel.onchange = () => { if (listening){ stopListening(); setTimeout(startListening, 400); } };
@@ -3587,7 +3597,7 @@ renderSituation();
 
 /* ================= motore Whisper, in locale nel browser =================
    Il modello si scarica una volta e resta in cache: dopo funziona senza rete. */
-const WHISPER_MODEL = 'onnx-community/whisper-base';
+const wModelSel = () => (document.getElementById('wModel') || {}).value || 'onnx-community/whisper-small';
 const LANG_MAP = {'it-IT':'italian','es-ES':'spanish','fr-FR':'french','en-US':'english'};
 
 let whisper = null, whisperLoading = null;
@@ -3603,7 +3613,7 @@ async function loadWhisper(){
     const mod = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5');
     mod.env.allowLocalModels = false;
     const device = navigator.gpu ? 'webgpu' : 'wasm';
-    whisper = await mod.pipeline('automatic-speech-recognition', WHISPER_MODEL, {
+    whisper = await mod.pipeline('automatic-speech-recognition', wModelSel(), {
       dtype: device === 'webgpu' ? 'fp32' : 'q8',
       device,
       progress_callback: p => {
@@ -3647,7 +3657,7 @@ async function startWhisper(){
     };
     src.connect(wNode); wNode.connect(mute); mute.connect(wCtx.destination);
     wStatus('listening (whisper)');
-    wTimer = setInterval(flushWhisper, 4500);
+    wTimer = setInterval(flushWhisper, 6000);
   } catch(e){
     lastError = e.message || e.name;
     wStatus('whisper failed: ' + lastError);
@@ -3659,7 +3669,7 @@ async function flushWhisper(){
   if (wBusy || !wChunks.length) return;
   const total = wChunks.reduce((n,c) => n + c.length, 0);
   const rate = wCtx.sampleRate;
-  if (total < rate * 1.2) return;                    // meno di un secodo: aspetto
+  if (total < rate * 2.0) return;                    // meno di un secodo: aspetto
   const merged = new Float32Array(total);
   let off = 0; for (const c of wChunks){ merged.set(c, off); off += c.length; }
   // tengo mezzo secondo di coda, per non tagliare le parole a meta'
@@ -3732,7 +3742,7 @@ function renderAllTables(){
     const rows = DATA.riders.filter(r => r[posKey]).sort((a,b) => a[posKey] - b[posKey])
       .map(r => ({...r, pos: r[posKey]}));
     document.getElementById('t-' + key).innerHTML = rows.length
-      ? clTable(rows, valHead, valOf)
+      ? '<div class="scroll5" style="max-height:60vh">' + clTable(rows, valHead, valOf) + '</div>'
       : '<div class="hint">Not in the imported communiqué.</div>';
   };
   mk('gc',     'gcPos',    'Time',   r => r.gcGap ? r.gcGap.replace(/^a\s*/,'+') : '—');
@@ -4037,7 +4047,7 @@ function ttTable(rows, valOf, title, note, moveFrom){
   if (!rows.length) return `<div class="box"><h3>${title}</h3><div class="hint">${note}</div></div>`;
   const best = rows[0];
   return `<div class="box"><h3>${title} — ${rows.length} riders</h3>
-    <table class="cl"><tbody>${rows.map((x,i) => `
+    <div class="scroll5"><table class="cl"><tbody>${rows.map((x,i) => `
       <tr>
         <td class="pos">${i+1}</td>
         <td class="bib">${x.bib}</td>
@@ -4046,7 +4056,32 @@ function ttTable(rows, valOf, title, note, moveFrom){
         <td class="val">${valOf(x, i, best)}${moveFrom ? `
           <button class="ghostchip" data-move="${moveFrom}|${x.bib}" title="move to the other table"
                   style="cursor:pointer;margin-left:8px">⇄</button>` : ''}</td>
-      </tr>`).join('')}</tbody></table></div>`;
+      </tr>`).join('')}</tbody></table></div></div>`;
+}
+
+/* Le due prestazioni una accanto all'altra: chi ha solo l'intermedio resta in
+   fondo, in attesa dell'arrivo. */
+function ttBoth(){
+  const bibs = [...new Set([...tt.inter.keys(), ...tt.finish.keys()])];
+  if (!bibs.length) return '';
+  const rows = bibs.map(b => ({r: byBib.get(b), b, i: tt.inter.get(b), f: tt.finish.get(b)}))
+    .filter(x => x.r)
+    .sort((a,b) => (a.f ?? Infinity) - (b.f ?? Infinity) || (a.i ?? Infinity) - (b.i ?? Infinity));
+  const best = rows.find(x => x.f !== undefined);
+  const bestI = Math.min(...rows.filter(x => x.i !== undefined).map(x => x.i));
+  return `<div class="box"><h3>Splits &amp; result — ${rows.length} riders</h3>
+    <div class="scroll5"><table class="cl ttboth"><thead><tr>
+      <th class="pos">#</th><th class="bib">Bib</th><th>Rider</th>
+      <th class="val">Split</th><th class="val">Finish</th><th class="val">Gap</th>
+    </tr></thead><tbody>${rows.map((x,i) => `
+      <tr>
+        <td class="pos">${x.f !== undefined ? i+1 : '—'}</td>
+        <td class="bib">${x.b}</td>
+        <td class="nm" data-slug="${x.r.slug}" style="cursor:pointer">${x.r.last}<small>${x.r.first}</small></td>
+        <td class="t1">${x.i !== undefined ? hms(x.i) + (x.i === bestI ? ' ●' : '') : '—'}</td>
+        <td class="t2">${x.f !== undefined ? hms(x.f) : '<span style="color:var(--muted)">in corsa</span>'}</td>
+        <td class="val">${x.f !== undefined && best ? (x.f === best.f ? 'best' : '+' + mmss(x.f - best.f)) : ''}</td>
+      </tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function renderTT(){
@@ -4082,6 +4117,7 @@ function renderTT(){
         ${pending ? `<br>${pending} riders still to finish.` : ''}
       </div>
     </div>
+    ${ttBoth()}
     ${ttTable(ttRank(tt.inter), (x,i,b) => i === 0 ? hms(x.sec) : '+' + mmss(x.sec - b.sec),
               'Intermediate' + (tt.interKm ? ' — km ' + tt.interKm : ''), 'No intermediate times yet.', 'inter')}
     ${ttTable(ttRank(tt.finish), (x,i,b) => i === 0 ? hms(x.sec) : '+' + mmss(x.sec - b.sec),
