@@ -240,7 +240,16 @@
         <input id="manual" inputmode="numeric" placeholder="Phrase, or command: front 11 12 13 · peloton +55 · tt 51 24 15">
       </div>
       <div class="row">
+        <select id="engine" style="flex:1">
+          <option value="browser">Engine: browser (fast)</option>
+          <option value="whisper">Engine: Whisper (accurate, offline)</option>
+        </select>
+      </div>
+      <div class="row">
         <select id="device" style="flex:1"><option value="">default microphone</option></select>
+      </div>
+      <div class="row" id="preloadRow" style="display:none">
+        <button class="ghost" id="preload" style="flex:1">Download Whisper model now (wifi)</button>
       </div>
       <div class="row" style="gap:10px">
         <button class="ghost" id="testMic" style="white-space:nowrap">Test mic</button>
@@ -2564,20 +2573,57 @@ const W = {
 const JOIN = new Set(['y','e','et','and','ed','a','de']);
 
 // l'italiano dice "centocinquantacinque" tutto attaccato: provo a spezzarlo
+/* Correzioni imparate: "quando senti X, leggi Y" */
+function applySubs(text){
+  for (const [bad, good] of (learned.subs || [])){
+    if (!bad) continue;
+    text = text.replace(new RegExp('\\b' + bad.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b','g'), good);
+  }
+  return text;
+}
+
+/* distanza di edit fra due parole */
+function editDist(a, b){
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  const d = Array.from({length: a.length+1}, (_,i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 0; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+
+function fuzzyKey(rest, keys){          // "sesanta..." -> "sessanta"
+  let best = null, bd = 2;
+  for (const k of keys){
+    if (k.length < 5) continue;
+    for (const L of [k.length - 1, k.length, k.length + 1]){
+      if (L < 4 || L > rest.length) continue;
+      const d = editDist(rest.slice(0, L), k);
+      if (d < bd){ bd = d; best = {k, L}; }
+    }
+  }
+  return bd <= 1 ? best : null;
+}
+
+/* "centocinquantacinque" si scompone in pezzi; se un pezzo e' storpiato
+   dalla trascrizione, si accetta il piu' somigliante. */
 function decompose(tok, dict){
   if (dict[tok] !== undefined) return dict[tok];
+  const keys = Object.keys(dict).sort((a,b) => b.length - a.length);
   let rest = tok, sum = 0, guard = 0;
-  const keys = Object.keys(dict).sort((a,b)=>b.length-a.length);
   while (rest && guard++ < 6){
     const k = keys.find(k => rest.startsWith(k) && k.length > 2);
-    if (!k) return null;
-    sum += dict[k];
-    rest = rest.slice(k.length);
+    if (k){ sum += dict[k]; rest = rest.slice(k.length); continue; }
+    const fz = fuzzyKey(rest, keys);
+    if (!fz) return null;
+    sum += dict[fz.k]; rest = rest.slice(fz.L);
   }
   return rest === '' && sum > 0 ? sum : null;
 }
 
 function wordsToDigits(text, lang){
+  text = applySubs(text);
   text = text.replace(/\b(?:un|una|uno|a)\s+(minut|hora|ora)/g, '1 $1');
   const dict = W[lang] || W['es-ES'];
   const out = [];
@@ -2621,7 +2667,7 @@ const BASE_PAT = {
   ttFin:   'arriv|traguardo|in meta|meta|llegada|cruza|final|finale|finito|definitiv|conclud|completa|tempo totale|tiempo total|finish|finished|crosses|ligne|franchit|chiude|ha chiuso|ferma il tempo|ferma il cronometro|stop the clock|tempo finale|tiempo final|temps final|ziel|eindtijd|sul traguardo|al traguardo'
 };
 const LKEY = 'radio-corsa-formule';
-let learned = {pel:[], head:[], count:[], go:[], join:[], over:[], chase:[], ttInter:[], ttFin:[]};
+let learned = {pel:[], head:[], count:[], go:[], join:[], over:[], chase:[], ttInter:[], ttFin:[], subs:[]};
 try{ Object.assign(learned, JSON.parse(localStorage.getItem(LKEY) || '{}')); }catch(e){}
 function saveLearned(){ try{ localStorage.setItem(LKEY, JSON.stringify(learned)); }catch(e){} }
 
@@ -2851,12 +2897,8 @@ function start(){
       const txt = (res[0] && res[0].transcript || '').trim();
       if (!txt) continue;
       gotAnything = true;
-      const {hits, marks} = detect(txt, langSel.value);
-      pushUtterance(txt, marks, !res.isFinal);
-      if (res.isFinal){
-        hits.forEach(h => addRider(h.rider, h.how));
-        updateRace(txt, hits);
-      }
+      if (res.isFinal) handlePhrase(txt);            // stessa strada di Whisper
+      else { const {marks} = detect(txt, langSel.value); pushUtterance(txt, marks, true); }
     }
   };
   rec.onend = () => {
@@ -2868,27 +2910,38 @@ function start(){
   rec.start();
 }
 
+const engineSel = document.getElementById('engine');
+const usingWhisper = () => engineSel.value === 'whisper';
+
 function startListening(){
-  if (!SR){ diag('this browser has no speech engine'); return; }
   stopMeter();                                   // il microfono deve essere libero
   listening = true; restarts = 0; gotAnything = false;
   micBtn.classList.add('on'); micLabel.textContent = 'Stop listening';
+  if (usingWhisper()){ startWhisper(); return; }
+  if (!SR){ diag('this browser has no speech engine'); stopListening(); return; }
   try{ start(); diag(); }
   catch(e){ lastError = e.message; stopListening(); diag(); }
 }
 function stopListening(){
   listening = false;
+  if (typeof stopWhisper === 'function') stopWhisper();
   try{ rec && rec.stop(); }catch(e){}
   rec = null;
   micBtn.classList.remove('on'); micLabel.textContent = 'Start listening';
   statusEl.textContent = 'idle';
 }
+engineSel.onchange = () => {
+  document.getElementById('preloadRow').style.display = usingWhisper() ? '' : 'none';
+  if (listening){ stopListening(); setTimeout(startListening, 400); }
+  diag(usingWhisper() ? 'Whisper selected — first run downloads the model' : 'browser engine');
+};
+document.getElementById('preload').onclick = () => loadWhisper();
 
 micBtn.onclick  = () => listening ? stopListening() : startListening();
 langSel.onchange = () => { if (listening){ stopListening(); setTimeout(startListening, 400); } };
 devSel.onchange  = () => { if (metering) startMeter(); };
 
-if (!SR){ micBtn.disabled = true; micLabel.textContent = 'Listening unavailable'; }
+if (!SR){ micLabel.textContent = 'Start listening (Whisper)'; engineSel.value = 'whisper'; document.getElementById('preloadRow').style.display = ''; }
 listDevices(); diag();
 
 /* ---------- interazioni ---------- */
@@ -3532,6 +3585,118 @@ function renderSituation(){
 }
 renderSituation();
 
+/* ================= motore Whisper, in locale nel browser =================
+   Il modello si scarica una volta e resta in cache: dopo funziona senza rete. */
+const WHISPER_MODEL = 'onnx-community/whisper-base';
+const LANG_MAP = {'it-IT':'italian','es-ES':'spanish','fr-FR':'french','en-US':'english'};
+
+let whisper = null, whisperLoading = null;
+let wCtx = null, wStream = null, wNode = null, wChunks = [], wTimer = null, wBusy = false;
+
+function wStatus(msg){ statusEl.textContent = msg; diag(msg); }
+
+async function loadWhisper(){
+  if (whisper) return whisper;
+  if (whisperLoading) return whisperLoading;
+  whisperLoading = (async () => {
+    wStatus('loading model…');
+    const mod = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5');
+    mod.env.allowLocalModels = false;
+    const device = navigator.gpu ? 'webgpu' : 'wasm';
+    whisper = await mod.pipeline('automatic-speech-recognition', WHISPER_MODEL, {
+      dtype: device === 'webgpu' ? 'fp32' : 'q8',
+      device,
+      progress_callback: p => {
+        if (p.status === 'progress' && p.total)
+          wStatus('downloading model ' + Math.round(p.loaded / p.total * 100) + '%');
+      }
+    });
+    wStatus('model ready (' + device + ')');
+    return whisper;
+  })();
+  return whisperLoading;
+}
+
+/* da qualsiasi frequenza a 16 kHz, che e' quella che Whisper si aspetta */
+function resample16k(data, rate){
+  if (rate === 16000) return data;
+  const ratio = rate / 16000, out = new Float32Array(Math.floor(data.length / ratio));
+  for (let i = 0; i < out.length; i++){
+    const p = i * ratio, i0 = Math.floor(p), frac = p - i0;
+    out[i] = data[i0] * (1 - frac) + (data[Math.min(i0+1, data.length-1)] || 0) * frac;
+  }
+  return out;
+}
+
+async function startWhisper(){
+  try{
+    await loadWhisper();
+    const id = devSel.value;
+    wStream = await navigator.mediaDevices.getUserMedia({
+      audio: id ? {deviceId:{exact:id}, echoCancellation:false, noiseSuppression:false} : true });
+    wCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (wCtx.state === 'suspended') await wCtx.resume();
+    const src = wCtx.createMediaStreamSource(wStream);
+    wNode = wCtx.createScriptProcessor(4096, 1, 1);
+    const mute = wCtx.createGain(); mute.gain.value = 0;      // niente ritorno in altoparlante
+    wNode.onaudioprocess = e => {
+      const d = e.inputBuffer.getChannelData(0);
+      wChunks.push(new Float32Array(d));
+      let peak = 0; for (let i = 0; i < d.length; i += 16) peak = Math.max(peak, Math.abs(d[i]));
+      vuEl.style.width = Math.min(100, Math.round(peak * 260)) + '%';
+    };
+    src.connect(wNode); wNode.connect(mute); mute.connect(wCtx.destination);
+    wStatus('listening (whisper)');
+    wTimer = setInterval(flushWhisper, 4500);
+  } catch(e){
+    lastError = e.message || e.name;
+    wStatus('whisper failed: ' + lastError);
+    stopListening();
+  }
+}
+
+async function flushWhisper(){
+  if (wBusy || !wChunks.length) return;
+  const total = wChunks.reduce((n,c) => n + c.length, 0);
+  const rate = wCtx.sampleRate;
+  if (total < rate * 1.2) return;                    // meno di un secodo: aspetto
+  const merged = new Float32Array(total);
+  let off = 0; for (const c of wChunks){ merged.set(c, off); off += c.length; }
+  // tengo mezzo secondo di coda, per non tagliare le parole a meta'
+  const keep = Math.floor(rate * 0.5);
+  wChunks = [merged.slice(Math.max(0, merged.length - keep))];
+
+  let peak = 0; for (let i = 0; i < merged.length; i += 32) peak = Math.max(peak, Math.abs(merged[i]));
+  if (peak < 0.012) return;                          // silenzio: non spreco calcolo
+
+  wBusy = true;
+  try{
+    const out = await whisper(resample16k(merged, rate), {
+      language: LANG_MAP[langSel.value] || 'italian', task: 'transcribe',
+      chunk_length_s: 12, no_repeat_ngram_size: 4
+    });
+    const txt = (out && out.text || '').trim();
+    if (txt && !/^[\s.,!?¿¡-]*$/.test(txt) && txt.length > 2) handlePhrase(txt);
+  } catch(e){ lastError = e.message; diag('whisper error: ' + e.message); }
+  wBusy = false;
+}
+
+function stopWhisper(){
+  if (wTimer){ clearInterval(wTimer); wTimer = null; }
+  if (wNode){ wNode.onaudioprocess = null; wNode.disconnect(); wNode = null; }
+  if (wStream){ wStream.getTracks().forEach(t => t.stop()); wStream = null; }
+  if (wCtx){ try{ wCtx.close(); }catch(e){} wCtx = null; }
+  wChunks = []; wBusy = false; vuEl.style.width = '0%';
+}
+
+/* una frase, da qualunque motore arrivi, segue sempre la stessa strada */
+function handlePhrase(txt){
+  const {hits, marks} = detect(txt, langSel.value);
+  pushUtterance(txt, marks, false);
+  hits.forEach(h => addRider(h.rider, h.how));
+  updateRace(txt, hits);
+}
+
 /* ================= linguette, tabelle, schema della corsa ================= */
 document.getElementById('tabs').addEventListener('click', e => {
   const b = e.target.closest('.tab'); if (!b) return;
@@ -3670,6 +3835,19 @@ function renderLearn(){
         </div>`).join('')
         : '<div class="hint">Nothing heard yet.</div>'}
     </div>
+    <div class="box">
+      <h3>Corrections — what it hears vs what you mean</h3>
+      <div class="row" style="gap:6px">
+        <input id="subBad" placeholder="it hears…" style="flex:1 1 130px">
+        <input id="subGood" placeholder="you mean…" style="flex:1 1 130px">
+        <button class="ghost" id="subAdd">Add</button>
+      </div>
+      <div class="chips" style="margin-top:9px">
+        ${(learned.subs || []).map((s,i) =>
+          `<button class="ghostchip" data-unsub="${i}" style="cursor:pointer">${s[0]} → ${s[1]} ✕</button>`).join('')
+          || '<span class="hint">Nothing yet. Example: it hears “sedici” when the speaker says “sessantasei”.</span>'}
+      </div>
+    </div>
     ${known.trim() ? `<div class="box"><h3>Learned words</h3>${known}</div>` : ''}`;
 
   el.querySelectorAll('[data-teach]').forEach(b => b.onclick = () => {
@@ -3707,6 +3885,18 @@ function renderLearn(){
     learned[c] = (learned[c] || []).filter(w => w !== word);
     saveLearned(); rebuildPatterns(); renderLearn();
   });
+  const sa = document.getElementById('subAdd');
+  if (sa) sa.onclick = () => {
+    const bad = document.getElementById('subBad').value.trim().toLowerCase();
+    const good = document.getElementById('subGood').value.trim().toLowerCase();
+    if (!bad || !good) return;
+    learned.subs = [...(learned.subs || []), [bad, good]];
+    saveLearned(); rebuildPatterns(); renderLearn();
+  };
+  el.querySelectorAll('[data-unsub]').forEach(b => b.onclick = () => {
+    learned.subs.splice(+b.dataset.unsub, 1); saveLearned(); renderLearn();
+  });
+
   const add = document.getElementById('learnAdd');
   if (add) add.onkeydown = e => { if (e.key === 'Enter' && add.value.trim()){ logHeard(add.value.trim(), ''); add.value = ''; } };
 }
@@ -3714,7 +3904,8 @@ function renderLearn(){
 /* ================= cronometro =================
    Ordine di partenza dal comunicato o a mano; tempi intermedi e finali
    dettati dallo speaker; classifica di tappa e generale virtuale. */
-const tt = { interKm: null, inter: new Map(), finish: new Map(), note: '', mode: false };
+const tt = { interKm: null, inter: new Map(), finish: new Map(), note: '', mode: false,
+             target: 'auto', last: null };
 
 
 /* Nel cronometro il tempo va letto PRIMA del dorsale, altrimenti il dorsale
@@ -3748,24 +3939,44 @@ const TT_TIME_PATS = [
   { rx: /\b(\d{1,2})\s+(\d{1,2})\b/g, calc: m => +m[1]*60 + +m[2] },
 ];
 
-/* Si cerca dall'ultima occorrenza in avanti — lo speaker dice prima il dorsale
-   e poi il tempo — e si accetta solo la lettura che lascia un dorsale valido. */
-function readTTTime(t, fallbackBib){
+/* Una frase puo' contenere piu' corridori: "il 12 in 5 15, il 13 in 5 20".
+   Si trovano prima tutti i tempi, poi a ciascuno si assegna il dorsale piu'
+   vicino che lo precede (o che lo segue, se davanti non ce n'e' nessuno). */
+function findTimeSpans(t){
+  const spans = [];
   for (const {rx, calc} of TT_TIME_PATS){
     rx.lastIndex = 0;
-    const ms = [...t.matchAll(rx)];
-    for (let i = ms.length - 1; i >= 0; i--){
-      const m = ms[i];
+    for (const m of t.matchAll(rx)){
       if (!m[0].trim()) continue;
       const sec = calc(m);
       if (!isFinite(sec) || sec < 5 || sec > 14400) continue;
-      const rest = t.slice(0, m.index) + ' ~ ' + t.slice(m.index + m[0].length);
-      let bib = (rest.match(/\b\d{1,3}\b/g) || []).map(Number).find(n => byBib.has(n));
-      if (bib === undefined && fallbackBib !== undefined) bib = fallbackBib;
-      if (bib !== undefined) return {sec, bib};
+      const from = m.index, to = m.index + m[0].length;
+      if (spans.some(s => from < s.to && to > s.from)) continue;   // niente sovrapposizioni
+      spans.push({from, to, sec});
     }
   }
-  return null;
+  return spans.sort((x,y) => x.from - y.from);
+}
+
+function readTTPairs(t, fallbackBib){
+  const spans = findTimeSpans(t);
+  if (!spans.length) return [];
+  const nums = [...t.matchAll(/\b\d{1,3}\b/g)]
+    .map(m => ({at: m.index, n: +m[0]}))
+    .filter(x => byBib.has(x.n) && !spans.some(s => x.at >= s.from && x.at < s.to));
+  const used = new Set(), out = [];
+  for (const s of spans){
+    let pick = [...nums].filter(x => x.at < s.from && !used.has(x.at)).pop();
+    if (!pick) pick = nums.find(x => x.at >= s.to && !used.has(x.at));
+    if (pick){ used.add(pick.at); out.push({sec: s.sec, bib: pick.n}); }
+    else if (fallbackBib !== undefined && !out.length) out.push({sec: s.sec, bib: fallbackBib});
+  }
+  return out;
+}
+
+function readTTTime(t, fallbackBib){          // compatibilita': la prima coppia
+  const p = readTTPairs(t, fallbackBib);
+  return p.length ? p[0] : null;
 }
 
 function updateTT(rawText, hits, lang){
@@ -3780,18 +3991,21 @@ function updateTT(rawText, hits, lang){
   if (!tt.mode && !isInter && !isFin) return false;
 
   const byName = hits.find(x => x.how === 'name');
-  const time = readTTTime(t, byName ? byName.rider.bib : undefined);
-  if (!time) return false;
-  const bib = time.bib;
+  const pairs = readTTPairs(t, byName ? byName.rider.bib : undefined);
+  if (!pairs.length) return false;
+  const time = pairs[0], bib = time.bib;
 
   // senza parola chiave: se ha gia' un intermedio il tempo nuovo e' l'arrivo
-  // regola secca: si dice "intermedio" -> tabella intermedio;
-  // si dice "arrivo" (o niente) -> tabella Stage result.
-  const kind = isInter ? 'inter' : 'finish';
+  // l'interruttore, se impostato, decide; altrimenti comanda la parola sentita
+  const heardWord = isInter ? 'intermedio' : isFin ? 'arrivo' : 'nessuna parola';
+  const kind = tt.target === 'auto' ? (isInter ? 'inter' : 'finish') : tt.target;
+  tt.last = {text: rawText, word: heardWord, table: kind === 'inter' ? 'Intermediate' : 'Stage result',
+             forced: tt.target !== 'auto'};
 
-  (kind === 'inter' ? tt.inter : tt.finish).set(bib, time.sec);
-  const r = byBib.get(bib);
-  tt.note = (kind === 'inter' ? 'intermediate' : 'finish') + ' — ' + bib + ' ' + r.last;
+  const dst = kind === 'inter' ? tt.inter : tt.finish;
+  pairs.forEach(p => dst.set(p.bib, p.sec));
+  const names = pairs.map(p => p.bib + ' ' + byBib.get(p.bib).last).join(', ');
+  tt.note = (kind === 'inter' ? 'intermediate' : 'finish') + ' — ' + names;
   logHeard(rawText, tt.note);
   renderTT();
   return true;
@@ -3846,10 +4060,20 @@ function renderTT(){
       <h3>Time trial${tt.note ? ' — ' + tt.note : ''}</h3>
       <div class="row" style="gap:8px;flex-wrap:wrap">
         <button class="${tt.mode ? 'primary' : 'ghost'}" id="ttMode" style="flex:1 1 150px">
-          ${tt.mode ? '● TT mode on — every time goes here' : 'TT mode off'}</button>
-        <input id="ttKm" placeholder="Intermediate at km" value="${tt.interKm ?? ''}" style="flex:1 1 130px">
+          ${tt.mode ? '● TT mode on' : 'TT mode off'}</button>
+        <input id="ttKm" placeholder="Intermediate at km" value="${tt.interKm ?? ''}" style="flex:1 1 120px">
         <button class="ghost" id="ttClear">Clear times</button>
       </div>
+      <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+        <span class="label" style="align-self:center">Send times to</span>
+        <button class="${tt.target === 'auto'   ? 'primary' : 'ghost'}" data-target="auto">Auto — by word</button>
+        <button class="${tt.target === 'inter'  ? 'primary' : 'ghost'}" data-target="inter">Intermediate</button>
+        <button class="${tt.target === 'finish' ? 'primary' : 'ghost'}" data-target="finish">Stage result</button>
+      </div>
+      ${tt.last ? `<div class="hint" style="margin-top:8px;border-left:2px solid var(--morado);padding-left:9px">
+        heard: “${tt.last.text}”<br>
+        word: <b>${tt.last.word}</b> → went to <b>${tt.last.table}</b>${tt.last.forced ? ' (forced by the switch)' : ''}
+      </div>` : ''}
       <div class="hint" style="margin-top:8px">
         <b>“intermedio”</b> (o paso / split / temps intermédiaire) → tabella <b>Intermediate</b>.
         <b>“arrivo”</b>, <b>“chiude”</b>, <b>“tempo finale”</b> — o nessuna parola — → <b>Stage result</b>.
@@ -3894,6 +4118,8 @@ function renderTT(){
   if (cl) cl.onclick = () => { tt.inter.clear(); tt.finish.clear(); tt.note = ''; renderTT(); };
   const md = document.getElementById('ttMode');
   if (md) md.onclick = () => { tt.mode = !tt.mode; renderTT(); };
+  el.querySelectorAll('[data-target]').forEach(b =>
+    b.onclick = () => { tt.target = b.dataset.target; renderTT(); });
 }
 
 renderAllTables();
