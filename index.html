@@ -2618,7 +2618,7 @@ const BASE_PAT = {
   over:  'neutraliz|ripres|riprend|richiamat|alcanzad|repris|caught|tutti insieme|gruppo compatto|gruppo unito|absorb|back together',
   chase: 'insegu|contrattacc|contro attacc|controataque|persecu|chase|counter|poursuit|secondo gruppo|intercalat',
   ttInter: 'intermedi|punto intermedio|paso intermedio|tiempo intermedio|primer paso|primer punto|parcial|referencia|punto de control|rilevament|passaggio|passa al|tempo al km|primo rilevamento|intermediate|split|checkpoint|first check|time check|intermediaire|temps intermediaire|pointage|point chrono|tussentijd|zwischenzeit',
-  ttFin:   'arriv|traguardo|meta|llegada|linea de meta|cruza la meta|final|finale|finish|crosses the line|ligne|franchit|chiude|ferma il tempo|stop the clock|tempo finale|tiempo final|temps final|ziel|eindtijd'
+  ttFin:   'arriv|traguardo|in meta|meta|llegada|cruza|final|finale|finito|definitiv|conclud|completa|tempo totale|tiempo total|finish|finished|crosses|ligne|franchit|chiude|ha chiuso|ferma il tempo|ferma il cronometro|stop the clock|tempo finale|tiempo final|temps final|ziel|eindtijd|sul traguardo|al traguardo'
 };
 const LKEY = 'radio-corsa-formule';
 let learned = {pel:[], head:[], count:[], go:[], join:[], over:[], chase:[], ttInter:[], ttFin:[]};
@@ -3770,8 +3770,8 @@ function readTTTime(t, fallbackBib){
 
 function updateTT(rawText, hits, lang){
   const t = wordsToDigits(norm(rawText), lang || langSel.value);
-  let isInter = RE_TT_INTER.test(t);
   const isFin = RE_TT_FIN.test(t);
+  let isInter = !isFin && RE_TT_INTER.test(t);   // "tempo all'arrivo" vince sempre
   if (!isInter && tt.interKm){                        // "al chilometro 5"
     const km = t.match(/\b(?:km|chilometr|kilometr|kilomet)\w*\s*(\d{1,3})/);
     if (km && Math.abs(+km[1] - parseFloat(tt.interKm)) < 1.5) isInter = true;
@@ -3786,8 +3786,8 @@ function updateTT(rawText, hits, lang){
 
   // senza parola chiave: se ha gia' un intermedio il tempo nuovo e' l'arrivo
   let kind;
-  if (isInter) kind = 'inter';
-  else if (isFin) kind = 'finish';
+  if (isFin) kind = 'finish';
+  else if (isInter) kind = 'inter';
   else {
     const maxInter = Math.max(0, ...tt.inter.values());
     const minFin   = tt.finish.size ? Math.min(...tt.finish.values()) : null;
@@ -3826,17 +3826,19 @@ function ttVirtualGC(){
   return rows;
 }
 
-function ttTable(rows, valOf, title, note){
+function ttTable(rows, valOf, title, note, moveFrom){
   if (!rows.length) return `<div class="box"><h3>${title}</h3><div class="hint">${note}</div></div>`;
   const best = rows[0];
   return `<div class="box"><h3>${title} — ${rows.length} riders</h3>
     <table class="cl"><tbody>${rows.map((x,i) => `
-      <tr data-slug="${x.r.slug}">
+      <tr>
         <td class="pos">${i+1}</td>
         <td class="bib">${x.bib}</td>
-        <td class="nm">${x.r.jersey ? `<span class="jbadge" style="background:${JCOL[x.r.jersey]}"></span>` : ''}${x.r.last}<small>${x.r.first}</small></td>
+        <td class="nm" data-slug="${x.r.slug}" style="cursor:pointer">${x.r.jersey ? `<span class="jbadge" style="background:${JCOL[x.r.jersey]}"></span>` : ''}${x.r.last}<small>${x.r.first}</small></td>
         <td class="tm">${x.r.teamName}</td>
-        <td class="val">${valOf(x, i, best)}</td>
+        <td class="val">${valOf(x, i, best)}${moveFrom ? `
+          <button class="ghostchip" data-move="${moveFrom}|${x.bib}" title="move to the other table"
+                  style="cursor:pointer;margin-left:8px">⇄</button>` : ''}</td>
       </tr>`).join('')}</tbody></table></div>`;
 }
 
@@ -3862,9 +3864,9 @@ function renderTT(){
       </div>
     </div>
     ${ttTable(ttRank(tt.inter), (x,i,b) => i === 0 ? hms(x.sec) : '+' + mmss(x.sec - b.sec),
-              'Intermediate' + (tt.interKm ? ' — km ' + tt.interKm : ''), 'No intermediate times yet.')}
+              'Intermediate' + (tt.interKm ? ' — km ' + tt.interKm : ''), 'No intermediate times yet.', 'inter')}
     ${ttTable(ttRank(tt.finish), (x,i,b) => i === 0 ? hms(x.sec) : '+' + mmss(x.sec - b.sec),
-              'Stage result', 'No finish times yet.')}
+              'Stage result', 'No finish times yet.', 'finish')}
     ${ttTable(ttVirtualGC().map(x => ({...x, sec: x.t})),
               (x,i,b) => i === 0 ? 'leader' : '+' + mmss(x.sec - b.sec),
               'GC after the time trial', 'Needs finish times and an imported GC.')}
@@ -3878,8 +3880,19 @@ function renderTT(){
           <td class="val">${r.startTime || ''}</td>
         </tr>`).join('')}</tbody></table></div>` : ''}`;
 
-  el.querySelectorAll('tr[data-slug]').forEach(tr =>
-    tr.onclick = () => window.open('https://www.procyclingstats.com/rider/' + tr.dataset.slug, '_blank'));
+  el.querySelectorAll('[data-slug]').forEach(td =>
+    td.onclick = () => window.open('https://www.procyclingstats.com/rider/' + td.dataset.slug, '_blank'));
+  el.querySelectorAll('[data-move]').forEach(b => b.onclick = ev => {
+    ev.stopPropagation();
+    const [from, bib] = b.dataset.move.split('|');
+    const src = from === 'inter' ? tt.inter : tt.finish;
+    const dst = from === 'inter' ? tt.finish : tt.inter;
+    const sec = src.get(+bib);
+    if (sec === undefined) return;
+    src.delete(+bib); dst.set(+bib, sec);
+    tt.note = 'moved to ' + (from === 'inter' ? 'stage result' : 'intermediate');
+    renderTT();
+  });
   const km = document.getElementById('ttKm');
   if (km) km.onchange = () => { tt.interKm = km.value.trim() || null; renderTT(); };
   const cl = document.getElementById('ttClear');
