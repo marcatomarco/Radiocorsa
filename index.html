@@ -3785,17 +3785,10 @@ function updateTT(rawText, hits, lang){
   const bib = time.bib;
 
   // senza parola chiave: se ha gia' un intermedio il tempo nuovo e' l'arrivo
-  let kind;
-  if (isFin) kind = 'finish';
-  else if (isInter) kind = 'inter';
-  else {
-    const maxInter = Math.max(0, ...tt.inter.values());
-    const minFin   = tt.finish.size ? Math.min(...tt.finish.values()) : null;
-    if (tt.inter.has(bib)) kind = 'finish';                        // il secondo tempo e' l'arrivo
-    else if (minFin && time.sec > minFin * 0.75) kind = 'finish';   // simile agli arrivi noti
-    else if (maxInter && time.sec > maxInter * 1.4) kind = 'finish';
-    else kind = tt.interKm ? 'inter' : 'finish';
-  }
+  // regola secca: si dice "intermedio" -> tabella intermedio;
+  // si dice "arrivo" (o niente) -> tabella Stage result.
+  const kind = isInter ? 'inter' : 'finish';
+
   (kind === 'inter' ? tt.inter : tt.finish).set(bib, time.sec);
   const r = byBib.get(bib);
   tt.note = (kind === 'inter' ? 'intermediate' : 'finish') + ' — ' + bib + ' ' + r.last;
@@ -3858,7 +3851,9 @@ function renderTT(){
         <button class="ghost" id="ttClear">Clear times</button>
       </div>
       <div class="hint" style="margin-top:8px">
-        Say it as the radio does: <b>“il 51 all’intermedio in 12 30”</b>, <b>“il 61 chiude in 24 15”</b>.
+        <b>“intermedio”</b> (o paso / split / temps intermédiaire) → tabella <b>Intermediate</b>.
+        <b>“arrivo”</b>, <b>“chiude”</b>, <b>“tempo finale”</b> — o nessuna parola — → <b>Stage result</b>.
+        Use ⇄ to move a time between the two.
         By hand: <b>tt 51 24 15</b> · <b>tt inter 51 12 30</b> · <b>tt reset</b>.
         ${pending ? `<br>${pending} riders still to finish.` : ''}
       </div>
