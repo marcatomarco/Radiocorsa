@@ -276,6 +276,23 @@
         <button class="ghost" id="openImport" style="flex:1">Import communiqué ▾</button>
       </div>
       <div class="imp" id="sheet">
+        <div style="margin-bottom:10px">
+          <div class="label" style="margin-bottom:6px">From ProCyclingStats</div>
+          <div class="row" style="gap:6px">
+            <select id="pcsRace" style="flex:1 1 100%"></select>
+          </div>
+          <div class="row" style="gap:6px;margin-top:6px">
+            <input id="pcsYear" placeholder="year" value="2026" style="flex:1 1 70px">
+            <input id="pcsStage" placeholder="stage n." style="flex:1 1 70px">
+          </div>
+          <div class="row" style="gap:6px;margin-top:6px">
+            <button class="ghost" id="pcsStart" style="flex:1">Start list</button>
+            <button class="ghost" id="pcsGC" style="flex:1">GC</button>
+            <button class="ghost" id="pcsStageBtn" style="flex:1">Stage</button>
+          </div>
+          <div class="result" id="pcsResult"></div>
+        </div>
+        <div class="label" style="margin-bottom:6px">Or from the communiqué</div>
         <div class="drop" id="drop">Drop the PDF here — or <label style="color:var(--text);text-decoration:underline;cursor:pointer">choose a file<input type="file" id="file" accept=".pdf,.txt" hidden></label></div>
         <textarea id="paste" placeholder="…or paste the communiqué text here"></textarea>
         <div class="row" style="margin-top:8px;gap:6px">
@@ -3116,20 +3133,41 @@ const RX = {
   gcNoNat: /(\d{1,3})[º°o.]?\s+(\d{1,3})\s+([A-ZÀ-ÝŽŠĐ][^\d]{2,45}?)\s*([A-Z]{3})\s+((?:\d+:)?\d{1,2}:\d{2}|a\s*[\d:]+)/g,
   ptsLine: /^(\d{1,3})[º°o.]?\s+(\d{1,3})\s+(.*?)(\d{1,3})\s*(?:Ptos?|Pts?|Punti|points)?\.?\s*$/,
   ptsAny:  /(\d{1,3})[º°o.]?\s+(\d{1,3})\s+([A-ZÀ-ÝŽŠĐ][^\d]{2,45}?)\s*(\d{1,3})\s*(?:Ptos?|Pts?|Punti|points)\.?/g,
+  gcV: /(\d{1,3})\s+(\d{1,3})\s+\*?\s*([A-ZÀ-ÝÑ][^\d]{2,44}?)\s*(?:\d{1,4}\s+)?([A-Z]{3})\s+([A-Z]{3})\s+(\S+)(?:\s+(\S+))?/g,
+  ptsV:/(\d{1,3})\s+(\d{1,3})\s+\*?\s*([A-ZÀ-ÝÑ][^\d]{2,44}?)\s*([A-Z]{3})\s+([A-Z]{3})\s+(\d{1,3})(?=\s|$)/g,
   startOrder: /(\d{1,3})\s+(\d{1,2}:\d{2}(?::\d{2})?)\s+(\d{1,3})\s+\*?\s*([A-ZÀ-ÝÑ][^\d]{2,45}?)\s+([A-Z]{3})\s+([A-Z]{3})(?=\s|$)/g,
   carOrder:/^(\d{1,3})[º°o.]?\s+([A-Z]{3})\s*[-–]\s*(.+)$/,
   rosterRider:/^(?:[SB]\s+)?(\d{1,3})\s+([A-ZÀ-ÝŽŠĐ][^,]{1,40},\s*[^\d]{2,40}?)\s*(?:a\s*[\d:]+|LIDER|LEADER)?\s*$/,
 };
 const all = (rx, s) => { rx.lastIndex = 0; return [...s.matchAll(rx)]; };
 
+/* Nelle tabelle ufficiali squadra e nazione compaiono in ordine diverso
+   ("Eq. Nac" nella generale, "Nac Equipo" nei punti): si distinguono
+   riconoscendo i codici di nazionalita'. */
+const NATS = new Set(('SLO GBR ESP ITA FRA BEL NED GER AUT SUI POR USA COL AUS NZL NOR DEN SWE FIN POL CZE SVK HUN RUS UKR EST LAT LTU LUX IRL MON KAZ ERI RWA ETH JPN CHN KOR TPE ARG BRA CHL URU VEN MEX GUA CRC CAN RSA MAR ALG TUN ISR TUR GRE CRO SLO SRB BUL ROU BLR MDA AND SMR ECU PER BOL PAN CUB DOM HON NCA SLV PAR IRI IND THA MAS SGP INA PHI VIE HKG UZB KGZ TJK TKM AZE ARM GEO ISL NOR FRO').split(/\s+/));
+const isNat = c => NATS.has(c);
+
+/* "10'57\"14" · "11'01\"" · "01'00\"" · "40\"" -> secondi */
+function timeToSec(s){
+  if (!s) return null;
+  let m = s.match(/^(?:(\d{1,2})[:'’])?(\d{1,2})["”]?(?:\d{2})?$/);
+  if (m) return (+(m[1] || 0)) * 60 + (+m[2]);
+  m = s.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
+  if (m) return +m[1]*3600 + +m[2]*60 + +m[3];
+  return null;
+}
+const secToGap = s => s === 0 ? 'a 0' : 'a ' + (s >= 60 ? Math.floor(s/60) + ':' + String(s%60).padStart(2,'0') : s);
+
 function sectionOf(line){
   const t = U(line).replace(/\s+/g,' ').trim();
   if (/GENERAL (MONTANA|MONTAGNE)/.test(t) || /^MONTANA$/.test(t)) return 'kom';
-  if (/GENERAL POR PUNTOS|CLASSEMENT PAR POINTS|GENERAL PUNTOS/.test(t)) return 'pts';
-  if (/GENERAL (JOVENES|JEUNES)/.test(t)) return 'young';
+  if (/GENERAL POR PUNTOS|CLASIFICACION POR PUNTOS|CLASSEMENT PAR POINTS|GENERAL PUNTOS/.test(t)) return 'pts';
+  if (/GENERAL (JOVENES|JEUNES)|CLASIFICACION DE LOS JOVENES|MAILLOT BLANCO/.test(t)) return 'young';
   if (/GENERAL (EQUIPOS|EQUIPES|BURGALES|ESPANOLES)/.test(t)) return 'skip';
+  if (/CLASIFICACION DE LA ETAPA/.test(t) && /GENERAL/.test(t)) return null;   // sottotitolo a due colonne
+  if (/CLASIFICACION POR EQUIPOS|CLASIFICACION DE LA ETAPA|PODIUM/.test(t)) return 'skip';
   if (/^GENERAL\b/.test(t) || /CLASIFICACION GENERAL|CLASSEMENT GENERAL/.test(t)) return 'gc';
-  if (/ORDEN DE SALIDA|ORDRE DE DEPART|START ORDER|ORDINE DI PARTENZA|CONTRARRELOJ|CONTRE.?LA.?MONTRE|TIME TRIAL/.test(t)) return 'startorder';
+  if (/ORDEN DE SALIDA|ORDRE DE DEPART|START ORDER|ORDINE DI PARTENZA|HEURE DE DEPART/.test(t)) return 'startorder';
   if (/^(ETAPA|ETAPE|STAGE|PUNTOS ETAPA|ETAPA MONTANA|SPRINT|EQUIPOS)/.test(t)) return 'skip';
   return null;
 }
@@ -3141,6 +3179,8 @@ function parseCommunique(text){
   const nameToCode = new Map();
   const get = bib => { if(!riders.has(bib)) riders.set(bib,{bib}); return riders.get(bib); };
   let sec = null, currentTeam = null;
+  const carry = [];
+  const byBibOk = b => b > 0 && b < 999;
   const counts = {gc:0, pts:0, kom:0, young:0, roster:0, start:0};
 
   for (const line of lines){
@@ -3158,12 +3198,48 @@ function parseCommunique(text){
     }
 
     // i nomi si raccolgono ovunque compaiano, senza toccare le posizioni
+    if (sec !== 'startorder') for (const m of all(RX.gcV, line)){
+      const bib = +m[2]; if (!bib || bib > 999) continue;
+      const n = splitName(m[3]);
+      const r = get(bib);
+      if (n.last && !r.last){
+        r.last = n.last; r.first = n.first || '';
+        const c1 = m[4], c2 = m[5];
+        r.team = r.team || (isNat(c1) && !isNat(c2) ? c2 : c1);
+        r.nat  = r.nat  || (r.team === c1 ? c2 : c1);
+      }
+    }
     if (sec !== 'startorder') for (const m of all(RX.gc, line)){
       const r = get(+m[2]); const n = splitName(m[3]);
       if (n.last && n.first && !r.last){ r.last = n.last; r.first = n.first; r.nat = r.nat || m[4]; r.team = r.team || m[5]; }
     }
 
     if (sec === 'gc'){
+      // formato ufficiale: pos, dorsale, nome, [punti], squadra, nazione, tempo, distacco
+      const vs = all(RX.gcV, line);
+      let done = false;
+      vs.forEach((m, idx) => {
+        const bib = +m[2]; if (!bib || bib > 999) return;
+        const n = splitName(m[3]); if (!n.last) return;
+        const c1 = m[4], c2 = m[5];
+        const team = isNat(c1) && !isNat(c2) ? c2 : c1;
+        const nat  = team === c1 ? c2 : c1;
+        let gap = null;
+        const dif = m[7], tim = m[6];
+        if (dif && /["”]/.test(dif)) gap = timeToSec(dif);
+        else if (/''|' '/.test(dif || '')) gap = carry[idx] ?? null;
+        else if (+m[1] === 1) gap = 0;
+        else if (tim && /["”:'’]/.test(tim)) gap = null;
+        if (gap === null && +m[1] === 1) gap = 0;
+        if (gap !== null) carry[idx] = gap;
+        const r = get(bib);
+        r.last = n.last; r.first = n.first || r.first || '';
+        r.team = team; r.nat = nat; r.gcPos = +m[1];
+        r.gcGap = gap !== null ? secToGap(gap) : (r.gcGap || 'a 0');
+        counts.gc++; done = true;
+      });
+      if (done) continue;
+
       let hit = false;
       for (const m of all(RX.gc, line)){
         const r = get(+m[2]); const n = splitName(m[3]);
@@ -3182,20 +3258,34 @@ function parseCommunique(text){
         }
       }
     } else if (sec === 'young'){
+      const vs = all(RX.gcV, line);
+      if (vs.length){
+        vs.forEach(m => { const b = +m[2]; if (byBibOk(b)) { get(b).youngPos = +m[1]; counts.young++; } });
+        continue;
+      }
       const ms = all(RX.young, line);
       if (ms.length) ms.forEach(m => { get(+m[3]).youngPos = +m[1]; counts.young++; });
       else { const m = RX.ptsLine.exec(line); if (m){ get(+m[2]).youngPos = +m[1]; counts.young++; } }
     } else if (sec === 'pts' || sec === 'kom'){
+      // tre formati diversi: riga singola, con la parola "Ptos", o tabella ufficiale
       const single = RX.ptsLine.exec(line);
-      const ms = single ? [single] : all(RX.ptsAny, line);
-      for (const m of ms){
-        if (+m[2] > 399 || +m[2] < 1) continue;
-        const r = get(+m[2]);
-        if (sec === 'pts'){ r.ptsPos = +m[1]; r.ptsPts = +m[4]; counts.pts++; }
-        else { r.komPos = +m[1]; r.komPts = +m[4]; counts.kom++; }
-        if (!r.last && m[3] && m[3].includes(',')){
-          const n = splitName(m[3].replace(/\s+[A-Z]{3}\b.*$/,''));
-          if (n.last && n.first){ r.last = n.last; r.first = n.first; }
+      const anyM = all(RX.ptsAny, line);
+      const vM = all(RX.ptsV, line);
+      const rows = vM.length ? vM.map(m => ({pos:+m[1], bib:+m[2], pts:+m[6], name:m[3], c1:m[4], c2:m[5]}))
+        : anyM.length ? anyM.map(m => ({pos:+m[1], bib:+m[2], pts:+m[4], name:m[3]}))
+        : single ? [{pos:+single[1], bib:+single[2], pts:+single[4], name:single[3]}] : [];
+      for (const x of rows){
+        if (!byBibOk(x.bib) || !isFinite(x.pts)) continue;
+        const r = get(x.bib);
+        if (sec === 'pts'){ r.ptsPos = x.pos; r.ptsPts = x.pts; counts.pts++; }
+        else { r.komPos = x.pos; r.komPts = x.pts; counts.kom++; }
+        if (!r.last && x.name){
+          const n = splitName(x.name.replace(/\s+[A-Z]{3}\b.*$/,''));
+          if (n.last){ r.last = n.last; r.first = n.first || ''; }
+        }
+        if (x.c1 && !r.team){
+          r.team = isNat(x.c1) ? x.c2 : x.c1;
+          r.nat  = r.team === x.c1 ? x.c2 : x.c1;
         }
       }
     } else if (sec === 'startorder'){
@@ -3231,13 +3321,17 @@ function parseCommunique(text){
 
 /* Nome della corsa e tappa, letti dall'intestazione del comunicato */
 function detectHeader(text){
-  const raws = text.split(/\r?\n/).filter(l => l.trim()).slice(0, 60);   // colonne intatte
+  const dAll = U(text).match(/\b\d{1,2}\s+(?:ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE|GENNAIO|FEBBRAIO|APRILE|MAGGIO|GIUGNO|LUGLIO|SETTEMBRE|OTTOBRE|NOVEMBRE|DICEMBRE|JANVIER|FEVRIER|MARS|AVRIL|MAI|JUIN|JUILLET|AOUT|DECEMBRE)\s+(20\d{2})\b/)
+             || text.match(/\b\d{1,2}[\/.]\d{1,2}[\/.](20\d{2})\b/);
+  const raws = text.split(/\r?\n/).filter(l => l.trim()).slice(0, 90);   // colonne intatte
   const lines = raws.map(l => l.replace(/\s+/g,' ').trim());
-  let race = '', stage = '', route = '', year = '', raceScore = -1;
+  let race = '', stage = '', route = '', year = (dAll ? dAll[1] : ''), raceScore = -1;
 
   for (let i = 0; i < lines.length; i++){
     const l = lines[i], u = U(l);
-    if (!year){ const y = l.match(/\b(20\d{2})\b/); if (y) year = y[1]; }
+    const dm = u.match(/\b\d{1,2}\s+(?:ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE|GENNAIO|FEBBRAIO|MARZO|APRILE|MAGGIO|GIUGNO|LUGLIO|AGOSTO|SETTEMBRE|OTTOBRE|NOVEMBRE|DICEMBRE|JANVIER|FEVRIER|MARS|AVRIL|MAI|JUIN|JUILLET|AOUT|SEPTEMBRE|OCTOBRE|NOVEMBRE|DECEMBRE)\s+(20\d{2})\b/)
+             || l.match(/\b\d{1,2}[\/.]\d{1,2}[\/.](20\d{2})\b/);
+    if (dm) year = dm[1] || dm[2] || year;
 
     if (!stage){
       let m = u.match(/\b(?:ETAPA|ETAPE|STAGE|TAPPA)\s*(?:N[º°O]?\s*)?(\d{1,2})\b/)
@@ -3252,7 +3346,7 @@ function detectHeader(text){
         if (m){ route = m[1].trim().replace(/[-\s]+$/,'') + ' → ' + m[2].trim().replace(/[-\s]+$/,''); break; }
       }
     }
-    if (!/WWW|@|HTTP|RADIO|CANAL|EMISION|DIRECTO|VELO|TWITTER/.test(u)){
+    if (i < 30 && !/WWW|@|HTTP|RADIO|CANAL|EMISION|DIRECTO|VELO|TWITTER|PALMARES|TRIUNFO|EDICION|GANO/.test(u)){
       const m = u.match(/\b((?:LA |IL |EL )?(?:VUELTA|TOUR|GIRO|VOLTA|TIRRENO|CRITERIUM|DAUPHINE|ROMANDIE|SUISSE|CATALUNYA|POLOGNE|ALGARVE)\b[A-ZÀ-Ý' -]{0,26})/);
       if (m){
         const cand = m[1].trim().replace(/\s+/g,' ');
@@ -3317,6 +3411,128 @@ async function pdfToText(file){
     all += best + '\n';
   }
   return all;
+}
+
+/* ================= ProCyclingStats =================
+   Il browser non puo' leggere pcs direttamente (CORS), quindi si passa da un
+   servizio gratuito che restituisce la pagina come testo. Se fallisce, resta
+   il ripiego: apri la pagina, copia, incolla. */
+const PCS_RACES = [
+  ['vuelta-a-espana',      'La Vuelta a España'],
+  ['tour-de-france',       'Tour de France'],
+  ['giro-d-italia',        "Giro d'Italia"],
+  ['vuelta-a-burgos',      'Vuelta a Burgos'],
+  ['tirreno-adriatico',    'Tirreno-Adriatico'],
+  ['paris-nice',           'Paris-Nice'],
+  ['itzulia-basque-country','Itzulia Basque Country'],
+  ['volta-a-catalunya',    'Volta a Catalunya'],
+  ['tour-de-suisse',       'Tour de Suisse'],
+  ['criterium-du-dauphine','Critérium du Dauphiné'],
+  ['tour-de-romandie',     'Tour de Romandie'],
+  ['uae-tour',             'UAE Tour'],
+];
+
+function pcsUrls(){
+  const race = document.getElementById('pcsRace').value;
+  const year = document.getElementById('pcsYear').value.trim();
+  const st   = document.getElementById('pcsStage').value.trim();
+  const base = 'https://www.procyclingstats.com/race/' + race + '/' + year;
+  return {
+    startlist: base + '/startlist/dossard',
+    stage:     st ? base + '/stage-' + st : base + '/result',
+    gc:        st ? base + '/stage-' + st + '-gc' : base + '/gc',
+  };
+}
+
+async function pcsFetch(url){
+  const proxies = [
+    u => 'https://r.jina.ai/' + u,
+    u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+  ];
+  for (const p of proxies){
+    try{
+      const r = await fetch(p(url), {cache: 'no-store'});
+      if (!r.ok) continue;
+      const t = await r.text();
+      if (t && t.length > 400) return t;
+    } catch(e){ /* provo il prossimo */ }
+  }
+  return null;
+}
+
+/* Le tabelle di pcs: prima si prova a leggerle per colonne, poi a occhio */
+const TIME_CELL = /^(?:(?:\d+:)?\d{1,2}:\d{2}(?::\d{2})?|\+\s*[\d:]+|,,|»|-)$/;
+
+function parsePCS(text){
+  const out = new Map();
+  const get = b => { if (!out.has(b)) out.set(b, {bib:b}); return out.get(b); };
+  const counts = {rows:0};
+
+  for (let raw of text.split(/\r?\n/)){
+    raw = raw.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');       // link markdown -> testo
+    if (!raw.trim()) continue;
+
+    const cells = (raw.includes('|') ? raw.split('|') : raw.split(/\s{2,}/))
+      .map(c => c.replace(/\s+/g,' ').trim()).filter(Boolean);
+    if (cells.length < 2) continue;
+
+    const nums = cells.filter(c => /^\d{1,3}$/.test(c)).map(Number);
+    const nameCell = cells.find(c => /[A-ZÀ-ÝŽŠĐ]{2,}/.test(c) && /[a-zà-ÿ]/.test(c) && c.length > 4);
+    if (!nameCell || !nums.length) continue;
+
+    const n = splitName(nameCell);
+    if (!n.last || !n.first) continue;
+
+    // il dorsale e' l'ultimo numero prima del nome; se ce n'e' uno solo, e' quello
+    const before = cells.slice(0, cells.indexOf(nameCell)).filter(c => /^\d{1,3}$/.test(c)).map(Number);
+    const bib  = before.length > 1 ? before[before.length-1] : before[0] ?? nums[0];
+    const rank = before.length > 1 ? before[0] : null;
+    if (!bib) continue;
+
+    const after = cells.slice(cells.indexOf(nameCell) + 1);
+    const team  = after.find(c => /[A-Za-zÀ-ÿ]{3}/.test(c) && !TIME_CELL.test(c));
+    const time  = after.find(c => TIME_CELL.test(c));
+
+    const r = get(bib);
+    r.last = n.last; r.first = n.first;
+    if (team) { r.teamName = team; r.team = r.team || team.slice(0,3).toUpperCase(); }
+    if (rank) r.gcPos = rank;
+    if (time && /\d/.test(time)) r.gcGap = time.replace(/^\+\s*/, 'a ');
+    counts.rows++;
+  }
+
+  const riders = [...out.values()].filter(r => r.last).map(r => ({
+    ...r, teamName: r.teamName || r.team || '', slug: slugify(r.first, r.last),
+    status: null, jersey: r.gcPos === 1 ? 'gc' : null
+  })).sort((a,b) => a.bib - b.bib);
+  return {riders, counts};
+}
+
+async function pcsLoad(kind){
+  const box = document.getElementById('pcsResult');
+  const u = pcsUrls();
+  const url = kind === 'startlist' ? u.startlist : kind === 'gc' ? u.gc : u.stage;
+  box.innerHTML = 'Reading ProCyclingStats…';
+  const text = await pcsFetch(url);
+  if (!text){
+    box.innerHTML = `<span class="bad">Could not read it from here.</span>
+      Open <a href="${url}" target="_blank" style="color:var(--morado)">this page</a>,
+      select all, copy, and paste it in the box above.`;
+    return;
+  }
+  document.getElementById('paste').value = text;
+  const {riders, counts} = parsePCS(text);
+  if (!riders.length){
+    box.innerHTML = `<span class="bad">Page read, but no rider rows recognised.</span>
+      The text is in the box above — press Analyse to try the generic parser.`;
+    return;
+  }
+  pending = {race: document.getElementById('pcsRace').selectedOptions[0].textContent + ' ' +
+                   document.getElementById('pcsYear').value,
+             stage: (document.getElementById('pcsStage').value ? 'Stage ' + document.getElementById('pcsStage').value : 'General'),
+             riders, teams: DATA.teams || {}};
+  box.innerHTML = `Found <b>${riders.length} riders</b> from ProCyclingStats. Press <b>Apply</b>.`;
+  applyBtn.disabled = false;
 }
 
 /* ---------- persistenza ---------- */
@@ -3395,6 +3611,12 @@ document.getElementById('reset').onclick = () => {
   try{ localStorage.removeItem(KEY); }catch(e){}
   applyData(SAMPLE); pasteEl.value = ''; resultEl.textContent = 'Burgos sample data restored.'; applyBtn.disabled = true;
 };
+
+document.getElementById('pcsRace').innerHTML =
+  PCS_RACES.map(([slug,name]) => `<option value="${slug}">${name}</option>`).join('');
+document.getElementById('pcsStart').onclick    = () => pcsLoad('startlist');
+document.getElementById('pcsGC').onclick       = () => pcsLoad('gc');
+document.getElementById('pcsStageBtn').onclick = () => pcsLoad('stage');
 
 const drop = document.getElementById('drop');
 ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('hot'); }));
