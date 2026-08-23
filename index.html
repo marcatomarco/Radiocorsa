@@ -286,9 +286,17 @@
             <input id="pcsStage" placeholder="stage n." style="flex:1 1 70px">
           </div>
           <div class="row" style="gap:6px;margin-top:6px">
-            <button class="ghost" id="pcsStart" style="flex:1">Start list</button>
-            <button class="ghost" id="pcsGC" style="flex:1">GC</button>
-            <button class="ghost" id="pcsStageBtn" style="flex:1">Stage</button>
+            <button class="ghost" id="pcsStart" style="flex:1 1 100%">Start list — bib numbers</button>
+          </div>
+          <div class="row" style="gap:6px;margin-top:6px">
+            <button class="ghost" data-pcs="gc" style="flex:1">GC</button>
+            <button class="ghost" data-pcs="points" style="flex:1">Points</button>
+            <button class="ghost" data-pcs="kom" style="flex:1">KOM</button>
+          </div>
+          <div class="row" style="gap:6px;margin-top:6px">
+            <button class="ghost" data-pcs="youth" style="flex:1">Youth</button>
+            <button class="ghost" data-pcs="teams" style="flex:1">Teams</button>
+            <button class="ghost" data-pcs="stage" style="flex:1">Stage</button>
           </div>
           <div class="result" id="pcsResult"></div>
         </div>
@@ -326,6 +334,7 @@
       <button class="tab" data-tab="points">Points</button>
       <button class="tab" data-tab="kom">KOM</button>
       <button class="tab" data-tab="youth">Youth</button>
+      <button class="tab" data-tab="teams">Teams</button>
       <button class="tab" data-tab="tt">TT</button>
       <button class="tab" data-tab="learn">Learn</button>
       <button class="tab" data-tab="roster">Start list</button>
@@ -346,6 +355,7 @@
       <section class="panel" id="p-points"><div class="tablewrap" id="t-points"></div></section>
       <section class="panel" id="p-kom"><div class="tablewrap" id="t-kom"></div></section>
       <section class="panel" id="p-youth"><div class="tablewrap" id="t-youth"></div></section>
+      <section class="panel" id="p-teams"><div class="tablewrap" id="t-teams"></div></section>
 
       <section class="panel" id="p-tt"></section>
       <section class="panel" id="p-learn"></section>
@@ -3163,7 +3173,8 @@ function sectionOf(line){
   if (/GENERAL (MONTANA|MONTAGNE)/.test(t) || /^MONTANA$/.test(t)) return 'kom';
   if (/GENERAL POR PUNTOS|CLASIFICACION POR PUNTOS|CLASSEMENT PAR POINTS|GENERAL PUNTOS/.test(t)) return 'pts';
   if (/GENERAL (JOVENES|JEUNES)|CLASIFICACION DE LOS JOVENES|MAILLOT BLANCO/.test(t)) return 'young';
-  if (/GENERAL (EQUIPOS|EQUIPES|BURGALES|ESPANOLES)/.test(t)) return 'skip';
+  if (/GENERAL (EQUIPOS|EQUIPES)|CLASSEMENT PAR EQUIPES|TEAM CLASSIFICATION/.test(t)) return 'teamscl';
+  if (/GENERAL (BURGALES|ESPANOLES)/.test(t)) return 'skip';
   if (/CLASIFICACION DE LA ETAPA/.test(t) && /GENERAL/.test(t)) return null;   // sottotitolo a due colonne
   if (/CLASIFICACION POR EQUIPOS|CLASIFICACION DE LA ETAPA|PODIUM/.test(t)) return 'skip';
   if (/^GENERAL\b/.test(t) || /CLASIFICACION GENERAL|CLASSEMENT GENERAL/.test(t)) return 'gc';
@@ -3176,6 +3187,7 @@ function parseCommunique(text){
   const lines = text.split(/\r?\n/).map(l => l.replace(/\s+/g,' ').trim()).filter(Boolean);
   const riders = new Map();
   const teamNames = new Map();          // codice -> nome esteso
+  const teamRank = new Map();
   const nameToCode = new Map();
   const get = bib => { if(!riders.has(bib)) riders.set(bib,{bib}); return riders.get(bib); };
   let sec = null, currentTeam = null;
@@ -3288,6 +3300,13 @@ function parseCommunique(text){
           r.nat  = r.team === x.c1 ? x.c2 : x.c1;
         }
       }
+    } else if (sec === 'teamscl'){
+      // una riga puo' contenere due colonne: prendo tutte le occorrenze,
+      // e l'ultima pagina letta (la generale) sovrascrive quella di tappa
+      const rx = /(\d{1,2})[º°o.]?\s+([A-ZÀ-Ý][A-ZÀ-Ý0-9.'&|\- ]{3,42}?)\s+([A-Z]{3})\s+((?:\d+:)?\d{1,2}:\d{2}|a\s*[\d:]+)/g;
+      for (const m of all(rx, line))
+        teamRank.set(+m[1], {pos:+m[1], name:m[2].trim().replace(/\s+/g,' '),
+                             code:m[3], gap:m[4].replace(/^a\s*/,'a ')});
     } else if (sec === 'startorder'){
       for (const m of all(RX.startOrder, line)){
         const r = get(+m[3]); const n = splitName(m[4]);
@@ -3316,7 +3335,7 @@ function parseCommunique(text){
     out.push(r);
   }
   out.sort((a,b) => a.bib - b.bib);
-  return {riders: out, counts};
+  return {riders: out, counts, teamRank: [...teamRank.values()].sort((a,b) => a.pos - b.pos)};
 }
 
 /* Nome della corsa e tappa, letti dall'intestazione del comunicato */
@@ -3437,10 +3456,15 @@ function pcsUrls(){
   const year = document.getElementById('pcsYear').value.trim();
   const st   = document.getElementById('pcsStage').value.trim();
   const base = 'https://www.procyclingstats.com/race/' + race + '/' + year;
+  const s = st ? '/stage-' + st : '';
   return {
     startlist: base + '/startlist/dossard',
-    stage:     st ? base + '/stage-' + st : base + '/result',
-    gc:        st ? base + '/stage-' + st + '-gc' : base + '/gc',
+    stage:  st ? base + s : base + '/result',
+    gc:     base + s + (st ? '-gc' : '/gc'),
+    points: base + s + (st ? '-points' : '/points'),
+    kom:    base + s + (st ? '-kom' : '/kom'),
+    youth:  base + s + (st ? '-youth' : '/youth'),
+    teams:  base + s + (st ? '-teams' : '/teams'),
   };
 }
 
@@ -3460,78 +3484,162 @@ async function pcsFetch(url){
   return null;
 }
 
-/* Le tabelle di pcs: prima si prova a leggerle per colonne, poi a occhio */
+/* DUE COSE DIVERSE, MAI MESCOLATE:
+   - la startlist porta i DORSALI (sono l'unica fonte dei numeri)
+   - la classifica porta POSIZIONI e TEMPI, e i corridori si riconoscono
+     dal nome: la prima colonna e' il piazzamento, non il numero. */
 const TIME_CELL = /^(?:(?:\d+:)?\d{1,2}:\d{2}(?::\d{2})?|\+\s*[\d:]+|,,|»|-)$/;
 
-function parsePCS(text){
-  const out = new Map();
-  const get = b => { if (!out.has(b)) out.set(b, {bib:b}); return out.get(b); };
-  const counts = {rows:0};
-
+function pcsRows(text){                       // righe grezze, senza interpretarle
+  const rows = [];
   for (let raw of text.split(/\r?\n/)){
-    raw = raw.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');       // link markdown -> testo
+    raw = raw.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
     if (!raw.trim()) continue;
-
     const cells = (raw.includes('|') ? raw.split('|') : raw.split(/\s{2,}/))
       .map(c => c.replace(/\s+/g,' ').trim()).filter(Boolean);
     if (cells.length < 2) continue;
-
-    const nums = cells.filter(c => /^\d{1,3}$/.test(c)).map(Number);
     const nameCell = cells.find(c => /[A-ZÀ-ÝŽŠĐ]{2,}/.test(c) && /[a-zà-ÿ]/.test(c) && c.length > 4);
-    if (!nameCell || !nums.length) continue;
-
+    if (!nameCell) continue;
     const n = splitName(nameCell);
     if (!n.last || !n.first) continue;
-
-    // il dorsale e' l'ultimo numero prima del nome; se ce n'e' uno solo, e' quello
-    const before = cells.slice(0, cells.indexOf(nameCell)).filter(c => /^\d{1,3}$/.test(c)).map(Number);
-    const bib  = before.length > 1 ? before[before.length-1] : before[0] ?? nums[0];
-    const rank = before.length > 1 ? before[0] : null;
-    if (!bib) continue;
-
-    const after = cells.slice(cells.indexOf(nameCell) + 1);
-    const team  = after.find(c => /[A-Za-zÀ-ÿ]{3}/.test(c) && !TIME_CELL.test(c));
-    const time  = after.find(c => TIME_CELL.test(c));
-
-    const r = get(bib);
-    r.last = n.last; r.first = n.first;
-    if (team) { r.teamName = team; r.team = r.team || team.slice(0,3).toUpperCase(); }
-    if (rank) r.gcPos = rank;
-    if (time && /\d/.test(time)) r.gcGap = time.replace(/^\+\s*/, 'a ');
-    counts.rows++;
+    const idx = cells.indexOf(nameCell);
+    rows.push({
+      name: n,
+      numsBefore: cells.slice(0, idx).filter(c => /^\d{1,3}$/.test(c)).map(Number),
+      after: cells.slice(idx + 1),
+    });
   }
+  return rows;
+}
 
-  const riders = [...out.values()].filter(r => r.last).map(r => ({
-    ...r, teamName: r.teamName || r.team || '', slug: slugify(r.first, r.last),
-    status: null, jersey: r.gcPos === 1 ? 'gc' : null
-  })).sort((a,b) => a.bib - b.bib);
-  return {riders, counts};
+/* startlist: i numeri sono dorsali */
+function parsePCSStartlist(text){
+  const out = new Map();
+  for (const r of pcsRows(text)){
+    const bib = r.numsBefore[r.numsBefore.length - 1];     // l'ultimo prima del nome
+    if (!bib || bib > 999) continue;
+    const team = r.after.find(c => /[A-Za-zÀ-ÿ]{3}/.test(c) && !TIME_CELL.test(c));
+    out.set(bib, {bib, last: r.name.last, first: r.name.first,
+                  teamName: team || '', team: (team || '').slice(0,3).toUpperCase(),
+                  slug: slugify(r.name.first, r.name.last), status: null, jersey: null});
+  }
+  return {riders: [...out.values()].sort((a,b) => a.bib - b.bib), matched: out.size, missing: []};
+}
+
+/* classifica: si aggiorna la startlist esistente, riconoscendo i nomi */
+function parsePCSRanking(text, base, field){
+  const byLast = new Map();
+  for (const r of base) {
+    const k = norm(r.last).trim();
+    if (!byLast.has(k)) byLast.set(k, []);
+    byLast.get(k).push(r);
+  }
+  const riders = base.map(r => ({...r}));
+  const idx = new Map(riders.map(r => [r.bib, r]));
+  let matched = 0; const missing = [];
+
+  for (const row of pcsRows(text)){
+    const pos = row.numsBefore[0];
+    if (!pos) continue;
+    const key = norm(row.name.last).trim();
+    let cand = byLast.get(key);
+    if (!cand){                                            // cognome parziale
+      const hit = [...byLast.keys()].find(k => k.startsWith(key) || key.startsWith(k));
+      cand = hit ? byLast.get(hit) : null;
+    }
+    if (!cand){ missing.push(row.name.last + ' ' + row.name.first); continue; }
+    let r = cand[0];
+    if (cand.length > 1){
+      const fi = norm(row.name.first)[0];
+      r = cand.find(x => norm(x.first)[0] === fi) || cand[0];
+    }
+    const target = idx.get(r.bib);
+    const time = row.after.find(c => TIME_CELL.test(c));
+    const pts  = row.after.map(c => c.trim()).reverse().find(c => /^\d{1,3}$/.test(c));
+    if (field === 'gc'){
+      target.gcPos = pos;
+      if (time && /\d/.test(time)) target.gcGap = time.replace(/^\+\s*/, 'a ');
+    } else if (field === 'points'){ target.ptsPos = pos; if (pts) target.ptsPts = +pts; }
+    else if (field === 'kom'){ target.komPos = pos; if (pts) target.komPts = +pts; }
+    else if (field === 'youth'){ target.youngPos = pos; }
+    matched++;
+  }
+  riders.forEach(r => r.jersey = r.gcPos === 1 ? 'gc' : r.ptsPos === 1 ? 'points'
+                              : r.komPos === 1 ? 'kom' : r.youngPos === 1 ? 'young' : null);
+  return {riders, matched, missing};
+}
+
+/* la classifica a squadre non ha corridori: nome squadra, posizione, tempo */
+function parsePCSTeams(text){
+  const rows = [];
+  for (let raw of text.split(/\r?\n/)){
+    raw = raw.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+    const cells = (raw.includes('|') ? raw.split('|') : raw.split(/\s{2,}/))
+      .map(c => c.replace(/\s+/g,' ').trim()).filter(Boolean);
+    if (cells.length < 2) continue;
+    const pos = /^\d{1,2}$/.test(cells[0]) ? +cells[0] : null;
+    if (!pos) continue;
+    const name = cells.slice(1).find(c => /[A-Za-zÀ-ÿ]{4}/.test(c) && !TIME_CELL.test(c));
+    if (!name) continue;
+    const time = cells.find(c => TIME_CELL.test(c));
+    if (rows.some(r => r.pos === pos)) continue;
+    rows.push({pos, name, gap: time ? time.replace(/^\+\s*/, 'a ') : ''});
+  }
+  return rows.sort((a,b) => a.pos - b.pos);
 }
 
 async function pcsLoad(kind){
   const box = document.getElementById('pcsResult');
   const u = pcsUrls();
-  const url = kind === 'startlist' ? u.startlist : kind === 'gc' ? u.gc : u.stage;
+  const url = u[kind] || u.stage;
   box.innerHTML = 'Reading ProCyclingStats…';
   const text = await pcsFetch(url);
   if (!text){
     box.innerHTML = `<span class="bad">Could not read it from here.</span>
       Open <a href="${url}" target="_blank" style="color:var(--morado)">this page</a>,
-      select all, copy, and paste it in the box above.`;
+      copy everything, paste it below and press <b>Analyse</b>.`;
     return;
   }
   document.getElementById('paste').value = text;
-  const {riders, counts} = parsePCS(text);
-  if (!riders.length){
-    box.innerHTML = `<span class="bad">Page read, but no rider rows recognised.</span>
-      The text is in the box above — press Analyse to try the generic parser.`;
+  pcsApply(kind, text, box);
+}
+
+function pcsApply(kind, text, box){
+  const raceName = document.getElementById('pcsRace').selectedOptions[0].textContent + ' ' +
+                   document.getElementById('pcsYear').value;
+  const stageNum = document.getElementById('pcsStage').value.trim();
+
+  if (kind === 'startlist'){
+    const {riders} = parsePCSStartlist(text);
+    if (!riders.length){ box.innerHTML = '<span class="bad">No bib numbers found on that page.</span> Use the /startlist/dossard page, or import the official PDF.'; return; }
+    pending = {race: raceName, stage: stageNum ? 'Stage ' + stageNum : (DATA.stage || ''),
+               riders, teams: DATA.teams || {}};
+    box.innerHTML = `Start list: <b>${riders.length} riders with bib numbers</b>. Press <b>Apply</b>.`;
+    applyBtn.disabled = false; return;
+  }
+
+  // classifica: serve la startlist gia' caricata, altrimenti non ci sono dorsali
+  const base = (pending && pending.riders) || DATA.riders || [];
+  if (!base.length || !base.some(r => r.bib)){
+    box.innerHTML = '<span class="bad">Load the start list first.</span> A GC page has no bib numbers — the riders are matched by name.';
     return;
   }
-  pending = {race: document.getElementById('pcsRace').selectedOptions[0].textContent + ' ' +
-                   document.getElementById('pcsYear').value,
-             stage: (document.getElementById('pcsStage').value ? 'Stage ' + document.getElementById('pcsStage').value : 'General'),
-             riders, teams: DATA.teams || {}};
-  box.innerHTML = `Found <b>${riders.length} riders</b> from ProCyclingStats. Press <b>Apply</b>.`;
+  if (kind === 'teams'){
+    const rows = parsePCSTeams(text);
+    if (!rows.length){ box.innerHTML = '<span class="bad">No team rows found.</span>'; return; }
+    pending = {race: raceName, stage: stageNum ? 'Stage ' + stageNum : (DATA.stage || ''),
+               riders: base, teams: DATA.teams || {}, teamsRank: rows};
+    box.innerHTML = `Teams: <b>${rows.length} teams</b>. Riders and bibs untouched. Press <b>Apply</b>.`;
+    applyBtn.disabled = false; return;
+  }
+
+  const LBL = {gc:'GC', points:'Points', kom:'KOM', youth:'Youth'};
+  const {riders, matched, missing} = parsePCSRanking(text, base, kind);
+  pending = {race: raceName, stage: stageNum ? 'Stage ' + stageNum : (DATA.stage || ''),
+             riders, teams: DATA.teams || {}, teamsRank: (pending && pending.teamsRank) || DATA.teamsRank};
+  box.innerHTML = `${LBL[kind] || kind}: <b>${matched} riders matched</b> by name on ${base.length} in the start list.` +
+    (missing.length ? `<br><span class="bad">${missing.length} not found:</span> ${missing.slice(0,5).join(', ')}${missing.length>5?'…':''}` : '') +
+    `<br>Bib numbers untouched. Press <b>Apply</b>.`;
   applyBtn.disabled = false;
 }
 
@@ -3577,7 +3685,7 @@ async function ingest(file){
 function analyze(){
   const text = pasteEl.value;
   if (!text.trim()){ resultEl.innerHTML = '<span class="bad">Load a PDF or paste the text first.</span>'; return; }
-  const {riders, counts} = parseCommunique(text);
+  const {riders, counts, teamRank} = parseCommunique(text);
   const found = detectHeader(text);
   const rn = document.getElementById('raceName'), sn = document.getElementById('stageName');
   if (found.race  && !rn.value.trim()) rn.value  = found.race;
@@ -3594,7 +3702,8 @@ function analyze(){
   pending = {
     race: document.getElementById('raceName').value.trim() || DATA.race,
     stage: document.getElementById('stageName').value.trim() || DATA.stage,
-    riders, teams: DATA.teams || {}
+    riders, teams: DATA.teams || {},
+    teamsRank: (teamRank && teamRank.length) ? teamRank : DATA.teamsRank
   };
   applyBtn.disabled = false;
 }
@@ -3614,9 +3723,8 @@ document.getElementById('reset').onclick = () => {
 
 document.getElementById('pcsRace').innerHTML =
   PCS_RACES.map(([slug,name]) => `<option value="${slug}">${name}</option>`).join('');
-document.getElementById('pcsStart').onclick    = () => pcsLoad('startlist');
-document.getElementById('pcsGC').onclick       = () => pcsLoad('gc');
-document.getElementById('pcsStageBtn').onclick = () => pcsLoad('stage');
+document.getElementById('pcsStart').onclick = () => pcsLoad('startlist');
+document.querySelectorAll('[data-pcs]').forEach(b => b.onclick = () => pcsLoad(b.dataset.pcs));
 
 const drop = document.getElementById('drop');
 ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('hot'); }));
@@ -3971,6 +4079,16 @@ function renderAllTables(){
   mk('points', 'ptsPos',   'Points', r => (r.ptsPts ?? '') + ' p');
   mk('kom',    'komPos',   'Points', r => (r.komPts ?? '') + ' p');
   mk('youth',  'youngPos', 'GC',     r => r.gcGap ? r.gcGap.replace(/^a\s*/,'+') : '—');
+
+  const tr_ = DATA.teamsRank || [];
+  document.getElementById('t-teams').innerHTML = tr_.length
+    ? '<div class="scroll5" style="max-height:60vh"><table class="cl"><thead><tr>' +
+      '<th class="pos">#</th><th>Team</th><th class="val">Time</th></tr></thead><tbody>' +
+      tr_.map(t => `<tr><td class="pos">${t.pos}</td>
+        <td class="nm">${t.name}</td>
+        <td class="val">${(t.gap || '').replace(/^a /,'+')}</td></tr>`).join('') +
+      '</tbody></table></div>'
+    : '<div class="hint">Not imported yet — use <b>Teams</b> in the import panel, or the official communiqué.</div>';
 
   document.querySelectorAll('table.cl tr[data-slug]').forEach(tr =>
     tr.onclick = () => window.open('https://www.procyclingstats.com/rider/' + tr.dataset.slug, '_blank'));
