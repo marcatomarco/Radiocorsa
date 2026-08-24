@@ -3906,14 +3906,21 @@ function updateRace(rawText, hits, lang){
       race.note = gap === 0 ? 'attack off the front' : 'counter-attack';
     }
     touched = true;
-  } else if ((bibs.length || count) && tHead){
-    // "altri tre a 30 secondi dai primi": nessun verbo, ma il riferimento basta
+  } else if ((bibs.length || count) && (tHead || tPel || tAny)){
+    // Nessun verbo, ma dorsali e un distacco: e' comunque un gruppo.
+    //   "a 30 secondi dai primi"      -> distanza dalla testa
+    //   "con 30 secondi di vantaggio" -> distanza dal gruppo
+    let gap;
+    if (tHead) gap = tHead.sec;
+    else {
+      const t = tPel || tAny;
+      if (race.pelotonGap !== null && race.pelotonGap > t.sec) gap = race.pelotonGap - t.sec;
+      else { gap = 0; race.pelotonGap = t.sec; }
+    }
     bibs.forEach(dropEverywhere);
-    race.groups.push({riders: new Set(bibs), gap: tHead.sec, size: Math.max(count, bibs.length)});
-    race.note = 'counter-attack'; touched = true;
-  } else if (bibs.length && race.groups.length === 0 && times.length){
-    race.groups.push({riders: new Set(bibs), gap: 0, size: bibs.length});
-    race.pelotonGap = times[0].sec; touched = true;
+    race.groups.push({riders: new Set(bibs), gap, size: Math.max(count, bibs.length)});
+    race.note = gap === 0 ? 'attack off the front' : 'counter-attack';
+    touched = true;
   }
 
   // distacco del gruppo: "il gruppo a 1'15" oppure "hanno 15 secondi sul gruppo"
