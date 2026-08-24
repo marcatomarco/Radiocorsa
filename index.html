@@ -298,10 +298,24 @@
             <button class="ghost" data-pcs="teams" style="flex:1">Teams</button>
             <button class="ghost" data-pcs="stage" style="flex:1">Stage</button>
           </div>
+          <div class="row" style="gap:6px;margin-top:8px">
+            <input id="anyUrl" placeholder="…or paste any URL (FirstCycling, race site, tracker)" style="flex:1 1 100%">
+          </div>
+          <div class="row" style="gap:6px;margin-top:6px">
+            <select id="anyKind" style="flex:1">
+              <option value="startlist">read as: start list (bibs)</option>
+              <option value="gc">read as: GC</option>
+              <option value="points">read as: points</option>
+              <option value="kom">read as: KOM</option>
+              <option value="youth">read as: youth</option>
+              <option value="teams">read as: teams</option>
+            </select>
+            <button class="ghost" id="anyGo">Read</button>
+          </div>
           <div class="result" id="pcsResult"></div>
         </div>
         <div class="label" style="margin-bottom:6px">Or from the communiqué</div>
-        <div class="drop" id="drop">Drop the PDF here — or <label style="color:var(--text);text-decoration:underline;cursor:pointer">choose a file<input type="file" id="file" accept=".pdf,.txt" hidden></label></div>
+        <div class="drop" id="drop">Drop the PDF here — or <label style="color:var(--text);text-decoration:underline;cursor:pointer">choose a file<input type="file" id="file" accept=".pdf,.txt,application/pdf,text/plain" hidden></label></div>
         <textarea id="paste" placeholder="…or paste the communiqué text here"></textarea>
         <div class="row" style="margin-top:8px;gap:6px">
           <input id="raceName" placeholder="Race name">
@@ -3130,6 +3144,7 @@ function splitName(s){
   }
   // "URIARTE BELZUNEGI Diego" — il cognome e' in maiuscolo, il nome no
   const toks = s.split(' ');
+  while (toks.length && /^\d{1,3}$/.test(toks[0])) toks.shift();   // posizione e dorsale
   const caps = [];
   while (toks.length && toks[0] === toks[0].toUpperCase() && /[A-ZÀ-ÝÑ]/.test(toks[0])) caps.push(toks.shift());
   if (!caps.length || !toks.length) return { last: s, first: '' };
@@ -3400,8 +3415,12 @@ function scoreText(t){
 }
 
 async function pdfToText(file){
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF reader not loaded — check the connection and reload');
+  // senza questo pdf.js non parte: va indicato dove sta il suo worker
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const buf = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  const pdf = await pdfjsLib.getDocument({data: buf, isEvalSupported: false}).promise;
   let all = '';
   for (let p = 1; p <= pdf.numPages; p++){
     const page = await pdf.getPage(p);
@@ -3495,13 +3514,22 @@ function pcsRows(text){                       // righe grezze, senza interpretar
   for (let raw of text.split(/\r?\n/)){
     raw = raw.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
     if (!raw.trim()) continue;
-    const cells = (raw.includes('|') ? raw.split('|') : raw.split(/\s{2,}/))
-      .map(c => c.replace(/\s+/g,' ').trim()).filter(Boolean);
-    if (cells.length < 2) continue;
-    const nameCell = cells.find(c => /[A-ZÀ-ÝŽŠĐ]{2,}/.test(c) && /[a-zà-ÿ]/.test(c) && c.length > 4);
-    if (!nameCell) continue;
-    const n = splitName(nameCell);
-    if (!n.last || !n.first) continue;
+    // "Team Visma | Lease a Bike" ha una barra nel nome: provo entrambi i tagli
+    const split = s => s.map(c => c.replace(/\s+/g,' ').trim()).filter(Boolean);
+    const tries = raw.includes('|') ? [split(raw.split('|')), split(raw.split(/\s{2,}/))]
+                                    : [split(raw.split(/\s{2,}/))];
+    let cells = null, nameCell = null, n = null, bestScore = -1;
+    for (const cand of tries){
+      if (cand.length < 2) continue;
+      const nc = cand.find(c => /[A-ZÀ-ÝŽŠĐ]{2,}/.test(c) && /[a-zà-ÿ]/.test(c) && c.length > 4);
+      if (!nc) continue;
+      const parsed = splitName(nc);
+      if (!parsed.last || !parsed.first) continue;
+      const numsBefore = cand.slice(0, cand.indexOf(nc)).filter(c => /^\d{1,3}$/.test(c)).length;
+      const score = numsBefore * 2 + (parsed.first.split(' ').length === 1 ? 1 : 0);
+      if (score > bestScore){ bestScore = score; cells = cand; nameCell = nc; n = parsed; }
+    }
+    if (!cells) continue;
     const idx = cells.indexOf(nameCell);
     rows.push({
       name: n,
@@ -3518,7 +3546,13 @@ function parsePCSStartlist(text){
   for (const r of pcsRows(text)){
     const bib = r.numsBefore[r.numsBefore.length - 1];     // l'ultimo prima del nome
     if (!bib || bib > 999) continue;
-    const team = r.after.find(c => /[A-Za-zÀ-ÿ]{3}/.test(c) && !TIME_CELL.test(c));
+    const tp = [];
+    for (const c of r.after){
+      if (TIME_CELL.test(c) || /^\d{1,3}$/.test(c)) break;
+      if (/[A-Za-zÀ-ÿ]{2}/.test(c)) tp.push(c);
+      if (tp.length === 2) break;
+    }
+    const team = tp.join(' | ');
     out.set(bib, {bib, last: r.name.last, first: r.name.first,
                   teamName: team || '', team: (team || '').slice(0,3).toUpperCase(),
                   slug: slugify(r.name.first, r.name.last), status: null, jersey: null});
@@ -3674,12 +3708,21 @@ document.getElementById('closeImport').onclick = () => sheet.classList.remove('o
 
 
 async function ingest(file){
-  resultEl.textContent = 'Reading the file…';
+  resultEl.innerHTML = 'Reading <b>' + file.name + '</b>…';
   try{
-    const text = file.name.toLowerCase().endsWith('.pdf') ? await pdfToText(file) : await file.text();
+    const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+    const text = isPdf ? await pdfToText(file) : await file.text();
     pasteEl.value = text;
+    if (!text.trim()){
+      resultEl.innerHTML = '<span class="bad">The PDF has no text layer</span> — it is a scan. Copy the text by hand and paste it here.';
+      return;
+    }
+    resultEl.innerHTML = 'Read <b>' + Math.round(text.length/1000) + 'k characters</b> — analysing…';
     analyze();
-  } catch(err){ resultEl.innerHTML = '<span class="bad">Cannot read the file: ' + err.message + '</span>'; }
+  } catch(err){
+    resultEl.innerHTML = '<span class="bad">Cannot read the file:</span> ' + (err.message || err) +
+      '<br>Open the PDF, select all, copy and paste it in the box below.';
+  }
 }
 
 function analyze(){
@@ -3708,7 +3751,14 @@ function analyze(){
   applyBtn.disabled = false;
 }
 
-document.getElementById('analyze').onclick = analyze;
+document.getElementById('analyze').onclick = () => {
+  const text = pasteEl.value;
+  const kind = document.getElementById('anyKind').value;
+  const fromWeb = document.getElementById('anyUrl').value.trim() && !/\f|ETAPA|ETAPE|COMUNICADO/i.test(text);
+  if (fromWeb){
+    pcsApply(kind, text, document.getElementById('pcsResult'));   // fonte esterna incollata
+  } else analyze();                                               // comunicato ufficiale
+};
 document.getElementById('file').onchange = e => e.target.files[0] && ingest(e.target.files[0]);
 document.getElementById('apply').onclick = () => {
   if (!pending) return;
@@ -3724,6 +3774,21 @@ document.getElementById('reset').onclick = () => {
 document.getElementById('pcsRace').innerHTML =
   PCS_RACES.map(([slug,name]) => `<option value="${slug}">${name}</option>`).join('');
 document.getElementById('pcsStart').onclick = () => pcsLoad('startlist');
+document.getElementById('anyGo').onclick = async () => {
+  const box = document.getElementById('pcsResult');
+  const url = document.getElementById('anyUrl').value.trim();
+  const kind = document.getElementById('anyKind').value;
+  if (!/^https?:\/\//.test(url)){ box.innerHTML = '<span class="bad">Paste a full address starting with https://</span>'; return; }
+  box.innerHTML = 'Reading…';
+  const text = await pcsFetch(url);
+  if (!text){
+    box.innerHTML = `<span class="bad">That site cannot be read from here.</span>
+      Open it, copy the table, paste it below and press <b>Analyse</b>.`;
+    return;
+  }
+  document.getElementById('paste').value = text;
+  pcsApply(kind, text, box);
+};
 document.querySelectorAll('[data-pcs]').forEach(b => b.onclick = () => pcsLoad(b.dataset.pcs));
 
 const drop = document.getElementById('drop');
