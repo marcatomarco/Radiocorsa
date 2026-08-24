@@ -130,6 +130,16 @@
   .tlname{font-family:var(--cond); font-weight:700; font-size:17px; line-height:1.15; padding-top:1px}
   .tlname small{display:block; font-family:var(--body); font-weight:500; font-size:10px; color:var(--muted)}
   .chips{display:flex; flex-wrap:wrap; gap:5px}
+  .glist{display:flex; flex-direction:column; gap:1px}
+  .grider{display:grid; grid-template-columns:38px 1fr auto auto; gap:8px; align-items:baseline;
+          padding:3px 0; cursor:pointer; border-bottom:1px solid rgba(255,255,255,.04)}
+  .grider:hover{background:var(--panel2)}
+  .grider .gb{font-family:var(--cond); font-weight:700; font-size:17px; text-align:right; color:var(--plate)}
+  .grider .gn{font-family:var(--cond); font-weight:700; font-size:15px; letter-spacing:.01em;
+              overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .grider .gn small{font-family:var(--body); font-weight:400; font-size:11px; color:var(--muted); margin-left:5px}
+  .grider .gt{font-family:var(--mono); font-size:10px; color:var(--muted)}
+  .grider .gg{font-family:var(--mono); font-size:11px; color:#C3C9D3; white-space:nowrap; min-width:74px; text-align:right}
   .chipb{background:var(--plate); color:#12130F; border:0; border-radius:3px; padding:3px 7px;
          font-family:var(--cond); font-weight:700; font-size:17px; line-height:1.1; cursor:pointer}
   .chipb small{font-family:var(--body); font-weight:500; font-size:10px; color:#5A5A52; margin-left:5px}
@@ -3947,12 +3957,19 @@ function renderSituation(){
   const dense = total > 10 ? ' dense' : '';
 
   const chips = g => {
-    const who = [...g.riders].map(b => byBib.get(b)).filter(Boolean);
+    const who = [...g.riders].map(b => byBib.get(b)).filter(Boolean)
+      .sort((a,b) => (a.gcPos ?? 999) - (b.gcPos ?? 999));
     const missing = Math.max(0, (g.size || 0) - who.length);
-    return `<div class="chips">` +
-      who.map(r => `<button class="chipb" data-slug="${r.slug}">${r.bib}<small>${r.last.split(' ')[0]}</small></button>`).join('') +
-      (missing ? `<span class="ghostchip">+${missing} unnamed</span>` : '') +
-      (who.length || missing ? '' : '<span class="ghostchip">no names</span>') + `</div>`;
+    if (!who.length && !missing) return '<div class="chips"><span class="ghostchip">no names</span></div>';
+    return `<div class="glist">` +
+      who.map(r => `<div class="grider" data-slug="${r.slug}">
+          <span class="gb">${r.bib}</span>
+          <span class="gn">${r.jersey ? `<span class="jbadge" style="background:${JCOL[r.jersey]}"></span>` : ''}${r.last}<small>${r.first}</small></span>
+          <span class="gt">${r.team || ''}</span>
+          <span class="gg">${r.gcPos ? r.gcPos + '° ' + (r.gcGap || '').replace(/^a /,'+') : ''}</span>
+        </div>`).join('') +
+      (missing ? `<div class="grider"><span class="gb">?</span><span class="gn" style="color:var(--muted)">${missing} not named yet</span></div>` : '') +
+      `</div>`;
   };
 
   const rows = race.groups.map((g,i) => `
@@ -3977,6 +3994,14 @@ function renderSituation(){
         </div>
       </div>
     </div>
+    ${called.length ? `<div class="box"><h3>Called on the road — last ${Math.min(called.length,8)}</h3>
+      <div class="glist">${called.slice(0,8).map(e => { const r = e.rider; return `
+        <div class="grider" data-slug="${r.slug}">
+          <span class="gb">${r.bib}</span>
+          <span class="gn">${r.last}<small>${r.first}</small></span>
+          <span class="gt">${r.team || ''}</span>
+          <span class="gg">${r.gcPos ? r.gcPos + '° ' + (r.gcGap || '').replace(/^a /,'+') : ''}</span>
+        </div>`; }).join('')}</div></div>` : ''}
     <div class="box">
       <h3>Virtual GC${change ? ' — new leader on the road' : ''}</h3>
       ${v.length ? `<div class="vstrip">` + v.map((x,i) =>
@@ -3985,8 +4010,8 @@ function renderSituation(){
         : '<div class="hint">Needs a group and a gap.</div>'}
     </div>`;
 
-  el.querySelectorAll('.chipb').forEach(btn =>
-    btn.onclick = () => window.open('https://www.procyclingstats.com/rider/' + btn.dataset.slug, '_blank'));
+  el.querySelectorAll('[data-slug]').forEach(x =>
+    x.onclick = () => window.open('https://www.procyclingstats.com/rider/' + x.dataset.slug, '_blank'));
 }
 renderSituation();
 
