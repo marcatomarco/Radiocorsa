@@ -278,8 +278,8 @@
       </div>
       <div class="label" id="diag" style="line-height:1.5;text-transform:none;letter-spacing:.02em;font-size:10px"></div>
       <div class="row">
-        <label class="ghost" style="flex:1;text-align:center;cursor:pointer">
-          Transcribe a recording<input type="file" id="audioFile" accept="audio/*" hidden></label>
+        <button class="ghost" id="audioBtn" style="flex:1">Transcribe a recording</button>
+        <input type="file" id="audioFile" accept="audio/*,.m4a,.mp3,.wav,.aac" style="display:none">
       </div>
       <div class="row">
         <button class="ghost" id="toggleRoster" style="flex:1">Start list</button>
@@ -3000,9 +3000,14 @@ engineSel.onchange = () => {
   diag(usingWhisper() ? 'Whisper selected — first run downloads the model' : 'browser engine');
 };
 document.getElementById('preload').onclick = () => loadWhisper();
+document.getElementById('audioBtn').onclick = () => document.getElementById('audioFile').click();
 document.getElementById('audioFile').onchange = e => {
-  const f = e.target.files[0];
-  if (f){ engineSel.value = 'whisper'; document.getElementById('preloadRow').style.display = ''; transcribeFile(f); }
+  const f = e.target.files && e.target.files[0];
+  if (!f){ diag('no file chosen'); return; }
+  engineSel.value = 'whisper';
+  document.getElementById('preloadRow').style.display = '';
+  transcribeFile(f);
+  e.target.value = '';                       // cosi' si puo' ricaricare lo stesso file
 };
 document.getElementById('wModel').onchange = () => { whisper = null; whisperLoading = null; diag('model changed — press download'); };
 
@@ -4152,15 +4157,20 @@ function handlePhrase(txt){
 }
 
 /* Trascrizione di una registrazione: stessa strada dell'ascolto dal vivo.
-   Serve per provare con audio vero e per rivedere una tappa a mente fredda. */
+   Il file viene riportato a 16 kHz mono in un colpo solo, cosi' regge anche
+   un audio lungo su iPad. */
 async function transcribeFile(file){
+  const say = m => { wStatus(m); pushUtterance('· ' + m, [], false); };
   try{
-    await loadWhisper();
-    wStatus('reading ' + file.name + '…');
+    say('reading ' + file.name + ' (' + Math.round(file.size/1048576) + ' MB)…');
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const audio = await ctx.decodeAudioData(await file.arrayBuffer());
+    let audio;
+    try{ audio = await ctx.decodeAudioData(await file.arrayBuffer()); }
+    catch(err){ say('this browser cannot decode that file — try converting it to wav or mp3'); return; }
+    ctx.close();
+    say('audio ok: ' + Math.round(audio.duration) + 's — cleaning…');
 
-    const off = new OfflineAudioContext(1, audio.length, audio.sampleRate);
+    const off = new OfflineAudioContext(1, Math.ceil(audio.duration * 16000), 16000);
     const s = off.createBufferSource(); s.buffer = audio;
     const hp  = off.createBiquadFilter(); hp.type='highpass';  hp.frequency.value=180;
     const hp2 = off.createBiquadFilter(); hp2.type='highpass'; hp2.frequency.value=180;
@@ -4169,22 +4179,27 @@ async function transcribeFile(file){
     comp.threshold.value=-24; comp.ratio.value=4; comp.attack.value=0.004; comp.release.value=0.25;
     s.connect(hp).connect(hp2).connect(pres).connect(comp).connect(off.destination);
     s.start();
-    const data = resample16k((await off.startRendering()).getChannelData(0), audio.sampleRate);
+    const data = (await off.startRendering()).getChannelData(0);
 
-    const WIN = 16000 * 25, OVER = 16000;         // blocchi da 25 s con un secondo di coda
-    let blocks = 0;
-    for (let i = 0; i < data.length; i += WIN - OVER){
+    say('loading the model (first time only, be patient)…');
+    await loadWhisper();
+
+    const WIN = 16000 * 25, STEP = WIN - 16000;
+    const total = Math.ceil(data.length / STEP);
+    let n = 0;
+    for (let i = 0; i < data.length; i += STEP){
       const part = data.slice(i, Math.min(i + WIN, data.length));
       if (part.length < 16000) break;
-      wStatus('transcribing ' + Math.round(i / data.length * 100) + '% of ' + file.name);
+      n++;
+      wStatus('transcribing ' + n + '/' + total);
       const out = await whisper(part, {language: LANG_MAP[langSel.value] || 'spanish',
                                        task: 'transcribe', chunk_length_s: 30});
       const txt = (out && out.text || '').trim();
       if (txt.length > 2) handlePhrase(txt);
-      blocks++;
+      await new Promise(r => setTimeout(r, 0));      // lascio respirare l'interfaccia
     }
-    wStatus('done — ' + blocks + ' blocks from ' + file.name);
-  } catch(e){ wStatus('file failed: ' + (e.message || e)); }
+    say('done — ' + n + ' blocks from ' + file.name);
+  } catch(e){ say('failed: ' + (e.message || e)); }
 }
 
 /* ================= linguette, tabelle, schema della corsa ================= */
