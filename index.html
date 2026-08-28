@@ -278,6 +278,10 @@
       </div>
       <div class="label" id="diag" style="line-height:1.5;text-transform:none;letter-spacing:.02em;font-size:10px"></div>
       <div class="row">
+        <label class="ghost" style="flex:1;text-align:center;cursor:pointer">
+          Transcribe a recording<input type="file" id="audioFile" accept="audio/*" hidden></label>
+      </div>
+      <div class="row">
         <button class="ghost" id="toggleRoster" style="flex:1">Start list</button>
         <button class="ghost" id="clear" style="flex:1">Clear</button>
         <button class="ghost" id="demo" style="flex:1">Demo</button>
@@ -2996,6 +3000,10 @@ engineSel.onchange = () => {
   diag(usingWhisper() ? 'Whisper selected — first run downloads the model' : 'browser engine');
 };
 document.getElementById('preload').onclick = () => loadWhisper();
+document.getElementById('audioFile').onchange = e => {
+  const f = e.target.files[0];
+  if (f){ engineSel.value = 'whisper'; document.getElementById('preloadRow').style.display = ''; transcribeFile(f); }
+};
 document.getElementById('wModel').onchange = () => { whisper = null; whisperLoading = null; diag('model changed — press download'); };
 
 micBtn.onclick  = () => listening ? stopListening() : startListening();
@@ -4074,6 +4082,14 @@ async function startWhisper(){
     wCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (wCtx.state === 'suspended') await wCtx.resume();
     const src = wCtx.createMediaStreamSource(wStream);
+    // pulizia: via il rombo sotto i 180 Hz, un po' di presenza sulle consonanti,
+    // compressione per tenersi lontani dalla saturazione
+    const hp  = wCtx.createBiquadFilter(); hp.type='highpass';  hp.frequency.value=180;  hp.Q.value=0.7;
+    const hp2 = wCtx.createBiquadFilter(); hp2.type='highpass'; hp2.frequency.value=180; hp2.Q.value=0.7;
+    const pres= wCtx.createBiquadFilter(); pres.type='highshelf'; pres.frequency.value=2500; pres.gain.value=6;
+    const comp= wCtx.createDynamicsCompressor();
+    comp.threshold.value=-24; comp.knee.value=12; comp.ratio.value=4;
+    comp.attack.value=0.004; comp.release.value=0.25;
     wNode = wCtx.createScriptProcessor(4096, 1, 1);
     const mute = wCtx.createGain(); mute.gain.value = 0;      // niente ritorno in altoparlante
     wNode.onaudioprocess = e => {
@@ -4082,7 +4098,8 @@ async function startWhisper(){
       let peak = 0; for (let i = 0; i < d.length; i += 16) peak = Math.max(peak, Math.abs(d[i]));
       vuEl.style.width = Math.min(100, Math.round(peak * 260)) + '%';
     };
-    src.connect(wNode); wNode.connect(mute); mute.connect(wCtx.destination);
+    src.connect(hp).connect(hp2).connect(pres).connect(comp).connect(wNode);
+    wNode.connect(mute); mute.connect(wCtx.destination);
     wStatus('listening (whisper)');
     wTimer = setInterval(flushWhisper, 6000);
   } catch(e){
@@ -4132,6 +4149,42 @@ function handlePhrase(txt){
   pushUtterance(txt, marks, false);
   hits.forEach(h => addRider(h.rider, h.how));
   updateRace(txt, hits);
+}
+
+/* Trascrizione di una registrazione: stessa strada dell'ascolto dal vivo.
+   Serve per provare con audio vero e per rivedere una tappa a mente fredda. */
+async function transcribeFile(file){
+  try{
+    await loadWhisper();
+    wStatus('reading ' + file.name + '…');
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const audio = await ctx.decodeAudioData(await file.arrayBuffer());
+
+    const off = new OfflineAudioContext(1, audio.length, audio.sampleRate);
+    const s = off.createBufferSource(); s.buffer = audio;
+    const hp  = off.createBiquadFilter(); hp.type='highpass';  hp.frequency.value=180;
+    const hp2 = off.createBiquadFilter(); hp2.type='highpass'; hp2.frequency.value=180;
+    const pres= off.createBiquadFilter(); pres.type='highshelf'; pres.frequency.value=2500; pres.gain.value=6;
+    const comp= off.createDynamicsCompressor();
+    comp.threshold.value=-24; comp.ratio.value=4; comp.attack.value=0.004; comp.release.value=0.25;
+    s.connect(hp).connect(hp2).connect(pres).connect(comp).connect(off.destination);
+    s.start();
+    const data = resample16k((await off.startRendering()).getChannelData(0), audio.sampleRate);
+
+    const WIN = 16000 * 25, OVER = 16000;         // blocchi da 25 s con un secondo di coda
+    let blocks = 0;
+    for (let i = 0; i < data.length; i += WIN - OVER){
+      const part = data.slice(i, Math.min(i + WIN, data.length));
+      if (part.length < 16000) break;
+      wStatus('transcribing ' + Math.round(i / data.length * 100) + '% of ' + file.name);
+      const out = await whisper(part, {language: LANG_MAP[langSel.value] || 'spanish',
+                                       task: 'transcribe', chunk_length_s: 30});
+      const txt = (out && out.text || '').trim();
+      if (txt.length > 2) handlePhrase(txt);
+      blocks++;
+    }
+    wStatus('done — ' + blocks + ' blocks from ' + file.name);
+  } catch(e){ wStatus('file failed: ' + (e.message || e)); }
 }
 
 /* ================= linguette, tabelle, schema della corsa ================= */
